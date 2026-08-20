@@ -1,0 +1,7 @@
+{
+  "name": "bumpalert",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}

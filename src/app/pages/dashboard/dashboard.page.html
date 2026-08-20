@@ -1,0 +1,110 @@
+<ion-content [fullscreen]="true" class="dashboard-content">
+  <div class="map-viewport">
+    <div #mapContainer class="map-container"></div>
+
+    <div class="map-error" *ngIf="mapLoadError">
+      <ion-icon name="alert-circle-outline"></ion-icon>
+      <p>{{ mapLoadError }}</p>
+    </div>
+
+    <ion-badge class="pending-badge" color="dark" *ngIf="pendingReportCount > 0">
+      {{ pendingReportCount }} pending
+    </ion-badge>
+  </div>
+
+  <ion-fab vertical="top" horizontal="end" slot="fixed">
+    <ion-fab-button size="small" color="light" (click)="goToTripSummary()">
+      <ion-icon name="list-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <!-- Floating buttons: recenter on my location + open from/to search -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed" class="map-fabs">
+    <ion-fab-button size="small" color="light" (click)="locateMe()">
+      <ion-icon name="locate-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <ion-fab vertical="bottom" horizontal="start" slot="fixed" class="map-fabs">
+    <ion-fab-button color="primary" (click)="toggleSearchPanel()">
+      <ion-icon [name]="searchPanelOpen ? 'close-outline' : 'navigate-outline'"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <!-- Standalone error toast for locate-me failures, shown even when the search panel is closed -->
+  <ion-card class="location-toast" slot="fixed" *ngIf="routingError && !searchPanelOpen">
+    <ion-card-content>{{ routingError }}</ion-card-content>
+  </ion-card>
+
+  <!-- Google-Maps-style from/to route planner -->
+  <ion-card class="search-panel" slot="fixed" *ngIf="searchPanelOpen">
+    <ion-card-content>
+      <ion-item lines="full">
+        <ion-icon slot="start" name="radio-button-on-outline" color="success"></ion-icon>
+        <ion-input
+          placeholder="Current location"
+          [value]="fromText"
+          (ionInput)="onFromInput($any($event.target).value)"
+        ></ion-input>
+      </ion-item>
+      <ion-list *ngIf="fromResults.length > 0" class="suggestions">
+        <ion-item button *ngFor="let result of fromResults" (click)="selectFrom(result)">
+          <ion-label class="ion-text-wrap">{{ result.label }}</ion-label>
+        </ion-item>
+      </ion-list>
+
+      <ion-item lines="full">
+        <ion-icon slot="start" name="location-outline" color="danger"></ion-icon>
+        <ion-input
+          placeholder="Enter destination"
+          [value]="toText"
+          (ionInput)="onToInput($any($event.target).value)"
+        ></ion-input>
+      </ion-item>
+      <ion-list *ngIf="toResults.length > 0" class="suggestions">
+        <ion-item button *ngFor="let result of toResults" (click)="selectTo(result)">
+          <ion-label class="ion-text-wrap">{{ result.label }}</ion-label>
+        </ion-item>
+      </ion-list>
+
+      <p class="routing-error" *ngIf="routingError">{{ routingError }}</p>
+
+      <ion-button expand="block" [disabled]="!selectedTo || routingInProgress" (click)="startNavigation()">
+        <ion-spinner name="dots" *ngIf="routingInProgress"></ion-spinner>
+        <span *ngIf="!routingInProgress">Start Navigation</span>
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Active route summary strip -->
+  <ion-card class="route-summary" slot="fixed" *ngIf="navigating && routeSummary">
+    <ion-card-content>
+      <div class="route-summary-row">
+        <div>
+          <strong>{{ routeSummary.durationMin }} min</strong>
+          <span class="ion-text-muted"> &middot; {{ routeSummary.distanceKm }} km</span>
+        </div>
+        <ion-button fill="clear" color="danger" size="small" (click)="stopNavigation()">Stop</ion-button>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Floating, non-intrusive bump alert -->
+  <div class="alert-wrapper" slot="fixed" [class.alert-visible]="activeAlert">
+    <ion-card *ngIf="activeAlert" class="alert-card">
+      <ion-card-content>
+        <div class="alert-header">
+          <ion-icon name="warning-outline" color="warning"></ion-icon>
+          <span>Potential Pothole Detected!</span>
+        </div>
+
+        <ion-progress-bar [value]="alertProgress" color="warning"></ion-progress-bar>
+
+        <div class="alert-actions">
+          <ion-button fill="clear" color="medium" (click)="dismiss()">Dismiss</ion-button>
+          <ion-button color="warning" (click)="quickReport()">Quick Report</ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>
