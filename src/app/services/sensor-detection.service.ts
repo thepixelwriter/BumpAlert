@@ -46,6 +46,26 @@ export class SensorDetectionService implements OnDestroy {
     this.motionListener = await Motion.addListener('accel', (event) => this.handleAccelEvent(event));
   }
 
+  /** iOS Safari requires a user-gesture-triggered permission prompt before devicemotion fires. */
+  needsMotionPermissionPrompt(): boolean {
+    const deviceMotionEventCtor = (window as unknown as { DeviceMotionEvent?: { requestPermission?: () => Promise<string> } }).DeviceMotionEvent;
+    return typeof deviceMotionEventCtor?.requestPermission === 'function';
+  }
+
+  async requestMotionPermission(): Promise<boolean> {
+    const deviceMotionEventCtor = (window as unknown as { DeviceMotionEvent?: { requestPermission?: () => Promise<string> } }).DeviceMotionEvent;
+    if (typeof deviceMotionEventCtor?.requestPermission !== 'function') {
+      return true;
+    }
+    try {
+      const result = await deviceMotionEventCtor.requestPermission();
+      return result === 'granted';
+    } catch (error) {
+      console.warn('BumpAlert: motion permission request failed', error);
+      return false;
+    }
+  }
+
   async stopListening(): Promise<void> {
     this.listening = false;
     await this.motionListener?.remove();

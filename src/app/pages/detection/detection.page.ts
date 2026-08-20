@@ -27,6 +27,9 @@ export class DetectionPage implements OnInit, OnDestroy {
   mildCount = 0;
   severeCount = 0;
 
+  /** True on iOS Safari where devicemotion needs an explicit, gesture-triggered permission prompt. */
+  awaitingMotionPermission = false;
+
   private pendingSub?: Subscription;
   private detectSub?: Subscription;
   private liveSub?: Subscription;
@@ -50,7 +53,13 @@ export class DetectionPage implements OnInit, OnDestroy {
       this.sparkline = [...this.sparkline.slice(1), Math.min(gForce, METER_MAX_G)];
     });
 
-    // Detection screen is the app's default/home tab, so start listening immediately.
+    // Detection screen is the app's default/home tab, so start listening immediately -
+    // unless this browser needs a user gesture to grant motion permission first (iOS Safari).
+    if (this.sensorDetection.needsMotionPermissionPrompt()) {
+      this.awaitingMotionPermission = true;
+      this.statusMessage = 'Tap "Enable Motion Access" below to allow bump detection.';
+      return;
+    }
     await this.toggleDetection(true);
   }
 
@@ -86,6 +95,17 @@ export class DetectionPage implements OnInit, OnDestroy {
     this.sensorDetection.clearAll();
     this.lastDetected = null;
     this.statusMessage = this.detectionEnabled ? 'Detection is running' : 'Detection is off';
+  }
+
+  /** Must run inside the click handler - iOS only grants motion access from a direct user gesture. */
+  async enableMotionAccess(): Promise<void> {
+    const granted = await this.sensorDetection.requestMotionPermission();
+    this.awaitingMotionPermission = false;
+    if (!granted) {
+      this.statusMessage = 'Motion access denied. Enable it in Safari Settings > Motion & Orientation Access.';
+      return;
+    }
+    await this.toggleDetection(true);
   }
 
   /** Meter fill 0-100 based on the current live g-force delta. */

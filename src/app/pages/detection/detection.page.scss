@@ -1,10 +1,13 @@
 .detection-page {
   --ion-background-color: #0c1016;
-  padding: 16px;
+  --padding-top: max(16px, env(safe-area-inset-top));
+  --padding-bottom: max(20px, env(safe-area-inset-bottom));
+  --padding-start: 16px;
+  --padding-end: 16px;
 }
 
 .header-card {
-  padding: 20px 16px 10px;
+  padding: 4px 0 6px;
 }
 
 .eyebrow {
@@ -71,6 +74,10 @@ h1 {
   border-radius: 12px;
   color: #a9c4ff;
   font-weight: 600;
+}
+
+.permission-btn {
+  margin-top: 14px;
 }
 
 .meter-block {

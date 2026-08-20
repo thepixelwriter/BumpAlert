@@ -17,6 +17,17 @@
 
       <div class="status-message">{{ statusMessage }}</div>
 
+      <ion-button
+        *ngIf="awaitingMotionPermission"
+        expand="block"
+        color="primary"
+        class="permission-btn"
+        (click)="enableMotionAccess()"
+      >
+        <ion-icon slot="start" name="lock-open-outline"></ion-icon>
+        Enable Motion Access
+      </ion-button>
+
       <div class="meter-block">
         <div class="meter-label">
           <span>Live impact strength</span>
