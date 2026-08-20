@@ -9,7 +9,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "deploy": "ng build --configuration production && wrangler deploy"
   },
   "private": true,
   "dependencies": {
@@ -21,6 +22,7 @@
     "@angular/platform-browser": "20.3.25",
     "@angular/platform-browser-dynamic": "20.3.25",
     "@angular/router": "20.3.25",
+    "@angular/service-worker": "20.3.25",
     "@capacitor/app": "8.1.1",
     "@capacitor/core": "8.5.0",
     "@capacitor/geolocation": "8.2.2",
@@ -62,7 +64,8 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.9.0"
+    "typescript": "~5.9.0",
+    "wrangler": "^4.125.0"
   },
   "description": "An Ionic project"
 }
