@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { SensorDetectionService } from '../../services/sensor-detection.service';
+import { SensorDetectionService, PermissionState, LiveAcceleration, LiveLocation } from '../../services/sensor-detection.service';
 import { PotholeReport } from '../../models/pothole-report.model';
 
 const SPARKLINE_SAMPLES = 40;
@@ -24,6 +24,14 @@ export class DetectionPage implements OnInit, OnDestroy {
   /** Rolling sample history for the sparkline bars. */
   sparkline: number[] = new Array(SPARKLINE_SAMPLES).fill(0);
 
+  /** Raw accelerometer axes (m/s^2), for the live readout. */
+  liveAcceleration: LiveAcceleration = { x: 0, y: 0, z: 0 };
+  /** Latest GPS fix, for the live readout. */
+  liveLocation: LiveLocation | null = null;
+
+  motionPermission: PermissionState = 'unknown';
+  locationPermission: PermissionState = 'unknown';
+
   mildCount = 0;
   severeCount = 0;
 
@@ -33,6 +41,10 @@ export class DetectionPage implements OnInit, OnDestroy {
   private pendingSub?: Subscription;
   private detectSub?: Subscription;
   private liveSub?: Subscription;
+  private liveAccelSub?: Subscription;
+  private motionPermSub?: Subscription;
+  private locationSub?: Subscription;
+  private locationPermSub?: Subscription;
 
   constructor(private readonly sensorDetection: SensorDetectionService) {}
 
@@ -53,10 +65,30 @@ export class DetectionPage implements OnInit, OnDestroy {
       this.sparkline = [...this.sparkline.slice(1), Math.min(gForce, METER_MAX_G)];
     });
 
+    this.liveAccelSub = this.sensorDetection.liveAcceleration$.subscribe((axes) => {
+      this.liveAcceleration = axes;
+    });
+
+    this.motionPermSub = this.sensorDetection.motionPermissionState$.subscribe((state) => {
+      this.motionPermission = state;
+    });
+
+    this.locationSub = this.sensorDetection.liveLocation$.subscribe((location) => {
+      this.liveLocation = location;
+    });
+
+    this.locationPermSub = this.sensorDetection.locationPermissionState$.subscribe((state) => {
+      this.locationPermission = state;
+    });
+
+    void this.sensorDetection.refreshLocationPermissionState();
+    void this.sensorDetection.startLocationWatch();
+
     // Detection screen is the app's default/home tab, so start listening immediately -
     // unless this browser needs a user gesture to grant motion permission first (iOS Safari).
     if (this.sensorDetection.needsMotionPermissionPrompt()) {
       this.awaitingMotionPermission = true;
+      this.motionPermission = 'prompt';
       this.statusMessage = 'Tap "Enable Motion Access" below to allow bump detection.';
       return;
     }
@@ -67,7 +99,12 @@ export class DetectionPage implements OnInit, OnDestroy {
     this.pendingSub?.unsubscribe();
     this.detectSub?.unsubscribe();
     this.liveSub?.unsubscribe();
+    this.liveAccelSub?.unsubscribe();
+    this.motionPermSub?.unsubscribe();
+    this.locationSub?.unsubscribe();
+    this.locationPermSub?.unsubscribe();
     await this.sensorDetection.stopListening();
+    await this.sensorDetection.stopLocationWatch();
   }
 
   async toggleDetection(forceOn?: boolean): Promise<void> {
@@ -128,5 +165,34 @@ export class DetectionPage implements OnInit, OnDestroy {
     link.download = `bumpalert-detections-${Date.now()}.json`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  permissionLabel(state: PermissionState): string {
+    switch (state) {
+      case 'granted':
+        return 'Granted';
+      case 'denied':
+        return 'Denied';
+      case 'prompt':
+        return 'Pending';
+      case 'not-required':
+        return 'OK';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  permissionColor(state: PermissionState): string {
+    switch (state) {
+      case 'granted':
+      case 'not-required':
+        return 'success';
+      case 'denied':
+        return 'danger';
+      case 'prompt':
+        return 'warning';
+      default:
+        return 'medium';
+    }
   }
 }

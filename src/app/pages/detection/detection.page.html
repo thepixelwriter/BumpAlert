@@ -2,7 +2,6 @@
   <div class="header-card">
     <p class="eyebrow">BumpAlert</p>
     <h1>Pothole Detection</h1>
-    <p class="subtitle">Live accelerometer test screen — drive or shake to trigger a detection.</p>
   </div>
 
   <ion-card class="status-card">
@@ -20,6 +19,7 @@
       <ion-button
         *ngIf="awaitingMotionPermission"
         expand="block"
+        size="small"
         color="primary"
         class="permission-btn"
         (click)="enableMotionAccess()"
@@ -28,9 +28,20 @@
         Enable Motion Access
       </ion-button>
 
+      <div class="permission-row">
+        <div class="permission-chip">
+          <span>Motion</span>
+          <ion-badge [color]="permissionColor(motionPermission)">{{ permissionLabel(motionPermission) }}</ion-badge>
+        </div>
+        <div class="permission-chip">
+          <span>Location</span>
+          <ion-badge [color]="permissionColor(locationPermission)">{{ permissionLabel(locationPermission) }}</ion-badge>
+        </div>
+      </div>
+
       <div class="meter-block">
         <div class="meter-label">
-          <span>Live impact strength</span>
+          <span>Impact strength</span>
           <strong>{{ currentGForce.toFixed(2) }}g</strong>
         </div>
         <ion-progress-bar [value]="meterPercent / 100" [color]="meterColor"></ion-progress-bar>
@@ -55,6 +66,45 @@
           <strong>{{ severeCount }}</strong>
         </div>
       </div>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card class="readout-card">
+    <ion-card-content>
+      <div class="readout-title">Live sensor readings</div>
+
+      <div class="readout-grid">
+        <div class="readout-cell">
+          <span>Accel X</span>
+          <strong>{{ liveAcceleration.x.toFixed(2) }}</strong>
+        </div>
+        <div class="readout-cell">
+          <span>Accel Y</span>
+          <strong>{{ liveAcceleration.y.toFixed(2) }}</strong>
+        </div>
+        <div class="readout-cell">
+          <span>Accel Z</span>
+          <strong>{{ liveAcceleration.z.toFixed(2) }}</strong>
+        </div>
+      </div>
+
+      <div class="readout-grid" *ngIf="liveLocation; else noLocation">
+        <div class="readout-cell wide">
+          <span>Latitude</span>
+          <strong>{{ liveLocation.latitude.toFixed(6) }}</strong>
+        </div>
+        <div class="readout-cell wide">
+          <span>Longitude</span>
+          <strong>{{ liveLocation.longitude.toFixed(6) }}</strong>
+        </div>
+        <div class="readout-cell">
+          <span>Accuracy</span>
+          <strong>{{ liveLocation.accuracy ? (liveLocation.accuracy | number: '1.0-0') + 'm' : '—' }}</strong>
+        </div>
+      </div>
+      <ng-template #noLocation>
+        <p class="readout-empty">Waiting for GPS fix…</p>
+      </ng-template>
     </ion-card-content>
   </ion-card>
 
@@ -109,11 +159,11 @@
   </ion-card>
 
   <div class="bottom-actions">
-    <ion-button expand="block" fill="outline" [disabled]="!pendingReports.length" (click)="exportReports()">
+    <ion-button expand="block" size="small" fill="outline" [disabled]="!pendingReports.length" (click)="exportReports()">
       <ion-icon slot="start" name="download-outline"></ion-icon>
       Export detections (JSON)
     </ion-button>
-    <ion-button expand="block" color="medium" fill="clear" (click)="clearReports()">
+    <ion-button expand="block" size="small" color="medium" fill="clear" (click)="clearReports()">
       Clear detections
     </ion-button>
   </div>

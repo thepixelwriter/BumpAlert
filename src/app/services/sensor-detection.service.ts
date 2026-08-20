@@ -17,12 +17,27 @@ const SEVERE_G_THRESHOLD = 2.2;
 /** Minimum time between two accepted detections, to avoid duplicate triggers from one bump. */
 const DETECTION_COOLDOWN_MS = 2000;
 
+export type PermissionState = 'granted' | 'denied' | 'prompt' | 'not-required' | 'unknown';
+
+export interface LiveAcceleration {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface LiveLocation {
+  latitude: number;
+  longitude: number;
+  accuracy: number | null;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class SensorDetectionService implements OnDestroy {
   private motionListener: PluginListenerHandle | null = null;
   private lastDetectionAt = 0;
+  private locationWatchId: string | null = null;
 
   private readonly pendingReportsSubject = new BehaviorSubject<PotholeReport[]>([]);
   /** All events captured during the current trip that haven't been finalized yet. */
@@ -36,6 +51,20 @@ export class SensorDetectionService implements OnDestroy {
   /** Emits every raw accelerometer sample's g-force delta, for live meters/sparkline UI. */
   readonly liveGForce$: Observable<number> = this.liveGForceSubject.asObservable();
 
+  private readonly liveAccelerationSubject = new Subject<LiveAcceleration>();
+  /** Emits every raw accelerometer sample's X/Y/Z axes (m/s^2), for a live readout. */
+  readonly liveAcceleration$: Observable<LiveAcceleration> = this.liveAccelerationSubject.asObservable();
+
+  private readonly motionPermissionSubject = new BehaviorSubject<PermissionState>('unknown');
+  readonly motionPermissionState$: Observable<PermissionState> = this.motionPermissionSubject.asObservable();
+
+  private readonly liveLocationSubject = new BehaviorSubject<LiveLocation | null>(null);
+  /** Latest GPS fix while the live location watch is active. */
+  readonly liveLocation$: Observable<LiveLocation | null> = this.liveLocationSubject.asObservable();
+
+  private readonly locationPermissionSubject = new BehaviorSubject<PermissionState>('unknown');
+  readonly locationPermissionState$: Observable<PermissionState> = this.locationPermissionSubject.asObservable();
+
   private listening = false;
 
   async startListening(): Promise<void> {
@@ -44,6 +73,9 @@ export class SensorDetectionService implements OnDestroy {
     }
     this.listening = true;
     this.motionListener = await Motion.addListener('accel', (event) => this.handleAccelEvent(event));
+    if (!this.needsMotionPermissionPrompt()) {
+      this.motionPermissionSubject.next('not-required');
+    }
   }
 
   /** iOS Safari requires a user-gesture-triggered permission prompt before devicemotion fires. */
@@ -55,13 +87,16 @@ export class SensorDetectionService implements OnDestroy {
   async requestMotionPermission(): Promise<boolean> {
     const deviceMotionEventCtor = (window as unknown as { DeviceMotionEvent?: { requestPermission?: () => Promise<string> } }).DeviceMotionEvent;
     if (typeof deviceMotionEventCtor?.requestPermission !== 'function') {
+      this.motionPermissionSubject.next('not-required');
       return true;
     }
     try {
       const result = await deviceMotionEventCtor.requestPermission();
+      this.motionPermissionSubject.next(result === 'granted' ? 'granted' : 'denied');
       return result === 'granted';
     } catch (error) {
       console.warn('BumpAlert: motion permission request failed', error);
+      this.motionPermissionSubject.next('denied');
       return false;
     }
   }
@@ -72,12 +107,56 @@ export class SensorDetectionService implements OnDestroy {
     this.motionListener = null;
   }
 
+  /** Starts a continuous GPS watch purely for the live readout - separate from per-detection capture. */
+  async startLocationWatch(): Promise<void> {
+    if (this.locationWatchId) {
+      return;
+    }
+    try {
+      this.locationWatchId = await Geolocation.watchPosition(
+        { enableHighAccuracy: true, timeout: 10000 },
+        (position, err) => {
+          if (err || !position) {
+            return;
+          }
+          this.locationPermissionSubject.next('granted');
+          this.liveLocationSubject.next({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+          });
+        },
+      );
+    } catch (error) {
+      console.warn('BumpAlert: unable to start location watch', error);
+      this.locationPermissionSubject.next('denied');
+    }
+  }
+
+  async stopLocationWatch(): Promise<void> {
+    if (this.locationWatchId) {
+      await Geolocation.clearWatch({ id: this.locationWatchId });
+      this.locationWatchId = null;
+    }
+  }
+
+  /** Best-effort permission read via the Permissions API - unsupported on some Safari versions. */
+  async refreshLocationPermissionState(): Promise<void> {
+    try {
+      const result = await Geolocation.checkPermissions();
+      this.locationPermissionSubject.next(result.location as PermissionState);
+    } catch {
+      this.locationPermissionSubject.next('unknown');
+    }
+  }
+
   private handleAccelEvent(event: AccelListenerEvent): void {
     const zAcceleration = this.extractGravityInclusiveZ(event);
     if (zAcceleration === null) {
       return;
     }
 
+    this.liveAccelerationSubject.next(this.extractAxes(event, zAcceleration));
     this.liveGForceSubject.next(this.toGForce(zAcceleration));
 
     const now = Date.now();
@@ -106,6 +185,16 @@ export class SensorDetectionService implements OnDestroy {
       return withoutGravity + GRAVITY_G;
     }
     return null;
+  }
+
+  /** X/Y for the live readout - reuses whichever field was populated for Z above. */
+  private extractAxes(event: AccelListenerEvent, resolvedZ: number): LiveAcceleration {
+    const source = event.accelerationIncludingGravity?.z != null ? event.accelerationIncludingGravity : event.acceleration;
+    return {
+      x: source?.x ?? 0,
+      y: source?.y ?? 0,
+      z: resolvedZ,
+    };
   }
 
   /** Converts a raw Z-axis reading (m/s^2) into a G-force delta and classifies severity. */
@@ -176,5 +265,6 @@ export class SensorDetectionService implements OnDestroy {
 
   ngOnDestroy(): void {
     void this.stopListening();
+    void this.stopLocationWatch();
   }
 }
