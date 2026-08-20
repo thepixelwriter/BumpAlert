@@ -32,6 +32,10 @@ export class SensorDetectionService implements OnDestroy {
   /** Emits the instant a new spike is detected, for the dashboard alert card. */
   readonly potholeDetected$: Observable<PotholeReport> = this.potholeDetectedSubject.asObservable();
 
+  private readonly liveGForceSubject = new Subject<number>();
+  /** Emits every raw accelerometer sample's g-force delta, for live meters/sparkline UI. */
+  readonly liveGForce$: Observable<number> = this.liveGForceSubject.asObservable();
+
   private listening = false;
 
   async startListening(): Promise<void> {
@@ -49,6 +53,8 @@ export class SensorDetectionService implements OnDestroy {
   }
 
   private handleAccelEvent(event: AccelListenerEvent): void {
+    this.liveGForceSubject.next(this.toGForce(event.acceleration.z));
+
     const now = Date.now();
     if (now - this.lastDetectionAt < DETECTION_COOLDOWN_MS) {
       return;

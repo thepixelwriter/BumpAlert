@@ -1,0 +1,109 @@
+<ion-content [fullscreen]="true" class="detection-page">
+  <div class="header-card">
+    <p class="eyebrow">BumpAlert</p>
+    <h1>Pothole Detection</h1>
+    <p class="subtitle">Live accelerometer test screen — drive or shake to trigger a detection.</p>
+  </div>
+
+  <ion-card class="status-card">
+    <ion-card-content>
+      <div class="status-row">
+        <div>
+          <div class="label">Detection</div>
+          <div class="value" [class.value-on]="detectionEnabled">{{ detectionEnabled ? 'ON' : 'OFF' }}</div>
+        </div>
+        <ion-toggle [checked]="detectionEnabled" (ionChange)="toggleDetection()"></ion-toggle>
+      </div>
+
+      <div class="status-message">{{ statusMessage }}</div>
+
+      <div class="meter-block">
+        <div class="meter-label">
+          <span>Live impact strength</span>
+          <strong>{{ currentGForce.toFixed(2) }}g</strong>
+        </div>
+        <ion-progress-bar [value]="meterPercent / 100" [color]="meterColor"></ion-progress-bar>
+
+        <div class="sparkline">
+          <div
+            class="spark-bar"
+            *ngFor="let sample of sparkline"
+            [style.height.%]="(sample / 3) * 100"
+            [class.spark-bar-hot]="sample >= 1.8"
+          ></div>
+        </div>
+      </div>
+
+      <div class="counts-row">
+        <div class="count-chip mild">
+          <span>Mild</span>
+          <strong>{{ mildCount }}</strong>
+        </div>
+        <div class="count-chip severe">
+          <span>Severe</span>
+          <strong>{{ severeCount }}</strong>
+        </div>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card class="info-card" *ngIf="lastDetected">
+    <ion-card-header>
+      <ion-card-title>Last detected bump</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <div class="meta-row">
+        <span>Severity</span>
+        <strong>{{ lastDetected.severity }}</strong>
+      </div>
+      <div class="meta-row">
+        <span>Intensity</span>
+        <strong>{{ lastDetected.gForce.toFixed(2) }}g</strong>
+      </div>
+      <div class="meta-row">
+        <span>Time</span>
+        <strong>{{ lastDetected.timestamp | date: 'shortTime' }}</strong>
+      </div>
+      <div class="meta-row">
+        <span>Location</span>
+        <strong>{{ lastDetected.latitude.toFixed(5) }}, {{ lastDetected.longitude.toFixed(5) }}</strong>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <ion-card class="list-card">
+    <ion-card-header>
+      <ion-card-title>Pending detections</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-list *ngIf="pendingReports.length; else noReports">
+        <ion-item *ngFor="let report of pendingReports" lines="full">
+          <ion-label>
+            <h3>{{ report.severity | titlecase }} bump</h3>
+            <p>{{ report.gForce.toFixed(2) }}g • {{ report.timestamp | date: 'shortTime' }}</p>
+          </ion-label>
+          <ion-badge [color]="report.severity === 'severe' ? 'danger' : 'warning'">
+            {{ report.status }}
+          </ion-badge>
+        </ion-item>
+      </ion-list>
+
+      <ng-template #noReports>
+        <div class="empty-state">
+          <ion-icon name="shield-checkmark-outline"></ion-icon>
+          <p>No bump detected yet. Detection is active — move the device or drive over a rough patch.</p>
+        </div>
+      </ng-template>
+    </ion-card-content>
+  </ion-card>
+
+  <div class="bottom-actions">
+    <ion-button expand="block" fill="outline" [disabled]="!pendingReports.length" (click)="exportReports()">
+      <ion-icon slot="start" name="download-outline"></ion-icon>
+      Export detections (JSON)
+    </ion-button>
+    <ion-button expand="block" color="medium" fill="clear" (click)="clearReports()">
+      Clear detections
+    </ion-button>
+  </div>
+</ion-content>
