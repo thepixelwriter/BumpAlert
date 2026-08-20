@@ -313,6 +313,14 @@ export class DashboardPage implements OnInit, OnDestroy {
     if (this.selectedFrom) {
       return this.selectedFrom;
     }
+    if (this.fromText.trim()) {
+      const geoResult = await this.resolveTextLocation(this.fromText, 'from');
+      if (geoResult) {
+        this.selectedFrom = geoResult;
+        this.fromText = geoResult.label;
+        return geoResult;
+      }
+    }
     if (this.lastKnownPosition) {
       return this.lastKnownPosition;
     }
@@ -320,6 +328,47 @@ export class DashboardPage implements OnInit, OnDestroy {
       const position = await this.mapNavigation.getCurrentPosition();
       return { latitude: position.coords.latitude, longitude: position.coords.longitude };
     } catch {
+      return null;
+    }
+  }
+
+  private async resolveDestination(): Promise<GeocodeResult | null> {
+    if (this.selectedTo) {
+      return this.selectedTo;
+    }
+    if (!this.toText.trim()) {
+      return null;
+    }
+    return this.resolveTextLocation(this.toText, 'destination');
+  }
+
+  private async resolveTextLocation(
+    rawValue: string,
+    field: 'from' | 'destination',
+  ): Promise<GeocodeResult | null> {
+    const value = rawValue.trim();
+    if (!value) {
+      return null;
+    }
+
+    try {
+      const results = await this.mapNavigation.geocodeAddress(value);
+      const match = results[0];
+      if (!match) {
+        this.routingError = `No ${field} match found for “${value}”. Try a more specific place name.`;
+        return null;
+      }
+      if (field === 'destination') {
+        this.selectedTo = match;
+        this.toText = match.label;
+      } else {
+        this.selectedFrom = match;
+        this.fromText = match.label;
+      }
+      return match;
+    } catch (error) {
+      console.warn(`BumpAlert: ${field} geocoding failed`, error);
+      this.routingError = 'Location lookup failed. Try a more specific address or check network access.';
       return null;
     }
   }
@@ -339,8 +388,9 @@ export class DashboardPage implements OnInit, OnDestroy {
   async startNavigation(): Promise<void> {
     this.routingError = null;
 
-    if (!this.selectedTo) {
-      this.routingError = 'Pick a destination from the suggestions list.';
+    const destination = await this.resolveDestination();
+    if (!destination) {
+      this.routingError = 'Enter a destination or pick one from the suggestions list.';
       return;
     }
 
@@ -352,8 +402,9 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     this.routingInProgress = true;
     try {
-      const route = await this.mapNavigation.getRoute(origin, this.selectedTo);
-      this.drawRoute(origin, this.selectedTo, route.points);
+      const route = await this.mapNavigation.getRoute(origin, destination);
+      this.selectedTo = destination;
+      this.drawRoute(origin, destination, route.points);
       this.routeSummary = {
         distanceKm: (route.distanceMeters / 1000).toFixed(1),
         durationMin: Math.round(route.durationSeconds / 60).toString(),
