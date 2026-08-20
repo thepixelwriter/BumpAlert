@@ -73,21 +73,39 @@ export class SensorDetectionService implements OnDestroy {
   }
 
   private handleAccelEvent(event: AccelListenerEvent): void {
-    this.liveGForceSubject.next(this.toGForce(event.acceleration.z));
+    const zAcceleration = this.extractGravityInclusiveZ(event);
+    if (zAcceleration === null) {
+      return;
+    }
+
+    this.liveGForceSubject.next(this.toGForce(zAcceleration));
 
     const now = Date.now();
     if (now - this.lastDetectionAt < DETECTION_COOLDOWN_MS) {
       return;
     }
 
-    const severity = this.classifySpike(event.acceleration.z);
+    const severity = this.classifySpike(zAcceleration);
     if (!severity) {
       return;
     }
 
     this.lastDetectionAt = now;
-    const gForce = this.toGForce(event.acceleration.z);
+    const gForce = this.toGForce(zAcceleration);
     void this.captureDetection(gForce, severity);
+  }
+
+  /** iOS Safari frequently leaves the gravity-excluded `acceleration` field null; `accelerationIncludingGravity` is reliable. */
+  private extractGravityInclusiveZ(event: AccelListenerEvent): number | null {
+    const withGravity = event.accelerationIncludingGravity?.z;
+    if (typeof withGravity === 'number') {
+      return withGravity;
+    }
+    const withoutGravity = event.acceleration?.z;
+    if (typeof withoutGravity === 'number') {
+      return withoutGravity + GRAVITY_G;
+    }
+    return null;
   }
 
   /** Converts a raw Z-axis reading (m/s^2) into a G-force delta and classifies severity. */
