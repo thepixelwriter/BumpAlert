@@ -5,12 +5,15 @@
   "homepage": "https://bumpalert.thepixelwriter.com/",
   "scripts": {
     "ng": "ng",
+    "config:env": "node scripts/set-env.js",
+    "prestart": "node scripts/set-env.js",
     "start": "ng serve",
+    "prebuild": "node scripts/set-env.js",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "deploy": "ng build --configuration production && wrangler deploy"
+    "deploy": "node scripts/set-env.js && ng build --configuration production && wrangler deploy"
   },
   "private": true,
   "dependencies": {
