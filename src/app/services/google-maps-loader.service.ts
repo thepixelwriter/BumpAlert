@@ -19,9 +19,14 @@ export class GoogleMapsLoaderService {
       return this.loadPromise;
     }
 
-    if (!environment.googleMapsApiKey) {
+    if (
+      !environment.googleMapsApiKey ||
+      environment.googleMapsApiKey === 'YOUR_GOOGLE_MAPS_API_KEY'
+    ) {
       return Promise.reject(
-        new Error('Missing googleMapsApiKey in environment.ts - see setup instructions.'),
+        new Error(
+          'Google Maps API key is not configured. Please set GOOGLE_MAPS_API_KEY in your .env or CI environment.',
+        ),
       );
     }
 
@@ -31,6 +36,13 @@ export class GoogleMapsLoaderService {
     }
 
     this.loadPromise = new Promise((resolve, reject) => {
+      // Global Google Maps authentication failure hook
+      (window as unknown as Record<string, () => void>)['gm_authFailure'] = () => {
+        console.error(
+          'Google Maps Authentication Error: The API key was rejected by Google. Verify that billing is active, required APIs are enabled (Maps JavaScript, Geocoding, Directions, Places), and HTTP referrer restrictions allow this domain.',
+        );
+      };
+
       const callbackName = '__bumpAlertGoogleMapsReady';
       (window as unknown as Record<string, () => void>)[callbackName] = () => {
         if (window.google?.maps) {
