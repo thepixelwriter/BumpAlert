@@ -48,7 +48,7 @@ export class MapPage implements OnInit, OnDestroy {
   nearestHazard: NearestHazardInfo | null = null;
 
   // Navigation and Route Planner
-  searchPanelOpen = true;
+  searchPanelOpen = false;
   toText = '';
   toResults: GeocodeResult[] = [];
   selectedTo: GeocodeResult | null = null;
@@ -202,6 +202,9 @@ export class MapPage implements OnInit, OnDestroy {
       this.map = new maps.Map(this.mapContainerRef.nativeElement, {
         center: { lat: DEFAULT_CENTER.latitude, lng: DEFAULT_CENTER.longitude },
         zoom: DEFAULT_ZOOM,
+        // Use one high-contrast theme before and during a trip, so navigation
+        // does not visually jump from a light map to a dark map.
+        styles: NAVIGATION_MAP_STYLES,
         // Keep the familiar Google Maps controls available on the map itself.
         disableDefaultUI: false,
         zoomControl: true,
@@ -279,16 +282,9 @@ export class MapPage implements OnInit, OnDestroy {
       this.currentLocationMarker = new google.maps.Marker({
         position,
         map: this.map,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 7,
-          fillColor: '#38bdf8',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
-        },
+        icon: this.createVehicleIcon(),
         zIndex: 100,
-        title: 'Your Location',
+        title: 'Your vehicle',
       });
       this.map.setCenter(position);
       this.map.setZoom(DEFAULT_ZOOM);
@@ -301,6 +297,23 @@ export class MapPage implements OnInit, OnDestroy {
         this.hasCenteredOnCurrentLocation = true;
       }
     }
+  }
+
+  /** A visible vehicle marker gives the rider a clear orientation while driving. */
+  private createVehicleIcon(): google.maps.Icon {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="22" fill="#08c7ef" fill-opacity=".28"/>
+      <path d="M15 22.5 18.5 13h11L33 22.5v12a2 2 0 0 1-2 2h-2v-3H19v3h-2a2 2 0 0 1-2-2v-12Z" fill="#166a8b" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M19.3 15.5h9.4l2 6H17.3l2-6Z" fill="#9be8ff"/>
+      <circle cx="19" cy="27" r="2.2" fill="#f8fbff"/><circle cx="29" cy="27" r="2.2" fill="#f8fbff"/>
+      <path d="M20 34h8" stroke="#ff5a5f" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>`;
+
+    return {
+      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      scaledSize: new google.maps.Size(48, 48),
+      anchor: new google.maps.Point(24, 24),
+    };
   }
 
   private syncHazardMarkers(reports: PotholeReport[]): void {
@@ -489,7 +502,7 @@ export class MapPage implements OnInit, OnDestroy {
     if (!this.routeCalculated || !this.routeSummary) return;
     this.navigating = true;
     this.searchPanelOpen = false;
-    this.map?.setOptions({ styles: NAVIGATION_MAP_STYLES, mapTypeControl: false });
+    this.map?.setOptions({ mapTypeControl: true });
     void this.toastCtrl.create({
       message: 'Navigation started. The map will follow your live location.',
       duration: 2500,
@@ -529,7 +542,7 @@ export class MapPage implements OnInit, OnDestroy {
     this.toText = '';
     this.routeCalculated = false;
     this.currentSpeedKph = null;
-    this.map?.setOptions({ styles: null, mapTypeControl: true });
+    this.map?.setOptions({ mapTypeControl: true });
   }
 
   toggleNavigationAudio(): void {

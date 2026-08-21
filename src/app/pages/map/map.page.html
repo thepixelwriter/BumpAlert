@@ -18,19 +18,18 @@
         <span>Continue on route</span>
         <strong>Head toward {{ selectedTo?.label || 'your destination' }}</strong>
       </div>
-      <button aria-label="Navigation options"><ion-icon name="sparkles"></ion-icon></button>
+      <div class="navigation-accent" aria-hidden="true"><ion-icon name="sparkles"></ion-icon></div>
     </div>
     <div class="then-turn-card"><span>Then</span><ion-icon name="return-down-forward-outline"></ion-icon></div>
 
     <div class="navigation-side-controls">
       <button (click)="locateMe()" aria-label="Recenter map"><ion-icon name="compass-outline"></ion-icon></button>
-      <button (click)="toggleSearchPanel()" aria-label="Search along route"><ion-icon name="search-outline"></ion-icon></button>
       <button (click)="toggleNavigationAudio()" [attr.aria-label]="navigationMuted ? 'Unmute navigation' : 'Mute navigation'">
         <ion-icon [name]="navigationMuted ? 'volume-mute-outline' : 'volume-high-outline'"></ion-icon>
       </button>
     </div>
 
-    <div class="navigation-speed-chip"><strong>{{ currentSpeedKph === null ? '--' : currentSpeedKph }}</strong><span>km/h</span></div>
+    <div class="navigation-speed-chip" *ngIf="!navigating"><strong>{{ currentSpeedKph === null ? '--' : currentSpeedKph }}</strong><span>km/h</span></div>
     <button class="report-road-button" (click)="explainAutomaticReporting()"><ion-icon name="warning-outline"></ion-icon> Report</button>
 
     <div class="active-trip-tray">
@@ -97,7 +96,7 @@
   </div>
 
   <!-- FLOATING HUD LAYER: real-time telemetry and proximity have matching dimensions -->
-  <div class="map-floating-hud" slot="fixed" *ngIf="!navigating">
+  <div class="map-floating-hud" slot="fixed" [class.navigation-hud]="navigating">
 
     <!-- Top Left: Live G-Force Meter Widget -->
     <div class="hud-widget gforce-hud-widget">

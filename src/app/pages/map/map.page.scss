@@ -1,5 +1,7 @@
 .map-page-viewport {
   --background: var(--ion-background-color);
+  /* Ionic supplies --ion-safe-area-top on native devices; env() covers PWAs. */
+  --map-top-offset: max(16px, calc(var(--ion-safe-area-top, 0px) + 12px), calc(env(safe-area-inset-top, 0px) + 12px));
   position: relative;
   width: 100%;
   height: 100%;
@@ -732,7 +734,7 @@
    the original HUD rules so the map remains a true, edge-to-edge canvas. */
 .navigation-shell {
   position: absolute;
-  top: calc(12px + env(safe-area-inset-top));
+  top: var(--map-top-offset);
   left: 16px;
   right: 16px;
   z-index: 140;
@@ -915,7 +917,7 @@
 }
 
 @media (max-width: 480px) {
-  .navigation-shell { left: 12px; right: 12px; top: calc(8px + env(safe-area-inset-top)); }
+  .navigation-shell { left: 12px; right: 12px; top: var(--map-top-offset); }
   .map-floating-hud { left: 12px; right: 12px; bottom: calc(78px + env(safe-area-inset-bottom)); gap: 8px; }
   .hud-widget { height: 110px; min-height: 110px; padding: 9px; }
   .hud-widget .hud-caption { font-size: 0.58rem; }
@@ -937,7 +939,7 @@
 .next-turn-card {
   pointer-events: auto;
   position: absolute;
-  top: calc(10px + env(safe-area-inset-top));
+  top: var(--map-top-offset);
   left: 12px;
   right: 12px;
   min-height: 112px;
@@ -954,7 +956,7 @@
   div { display: grid; gap: 4px; min-width: 0; }
   span { font-size: 15px; font-weight: 500; opacity: 0.85; }
   strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(21px, 6vw, 34px); font-weight: 500; }
-  button {
+  .navigation-accent {
     width: 62px;
     height: 62px;
     border-radius: 50%;
@@ -963,7 +965,6 @@
     color: #3975f6;
     display: grid;
     place-items: center;
-    cursor: pointer;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.24);
     ion-icon { font-size: 31px; }
   }
@@ -971,7 +972,7 @@
 
 .then-turn-card {
   position: absolute;
-  top: calc(122px + env(safe-area-inset-top));
+  top: calc(var(--map-top-offset) + 112px);
   left: 12px;
   padding: 12px 26px;
   display: flex;
@@ -988,10 +989,11 @@
 .navigation-side-controls {
   pointer-events: auto;
   position: absolute;
-  right: 14px;
+  left: 14px;
   top: 49%;
   display: grid;
   gap: 12px;
+  z-index: 2;
 
   button {
     width: 62px;
@@ -1089,9 +1091,88 @@
 @media (max-width: 380px) {
   .next-turn-card { grid-template-columns: 43px minmax(0, 1fr) 54px; padding-left: 15px; gap: 8px; }
   .next-turn-card .maneuver-icon { font-size: 38px; }
-  .next-turn-card button { width: 52px; height: 52px; }
+  .next-turn-card .navigation-accent { width: 52px; height: 52px; }
   .navigation-side-controls button { width: 54px; height: 54px; }
   .report-road-button { padding: 0 16px; }
   .active-trip-tray { grid-template-columns: minmax(0, 1fr) 54px 76px; padding: 14px; }
   .active-trip-tray .route-options { width: 54px; height: 54px; }
+}
+
+/* One app-owned navigation theme. Google Maps' own controls remain native so
+   users retain the familiar zoom, map type, Street View and fullscreen tools. */
+.destination-search-card,
+.start-navigation-bar,
+.hud-widget,
+.next-turn-card,
+.then-turn-card,
+.active-trip-tray,
+.navigation-side-controls button,
+.report-road-button {
+  background: rgba(10, 31, 42, 0.96);
+  border: 1px solid rgba(130, 222, 244, 0.18);
+  color: #f3fbfd;
+}
+
+.destination-search-card {
+  box-shadow: 0 8px 24px rgba(0, 7, 12, 0.38);
+
+  button { color: #a8d9e4; }
+  .destination-input-wrap label { color: #8eb9c4; }
+  .destination-input-wrap input { color: #f3fbfd; }
+  .destination-input-wrap input::placeholder { color: #a3bbc2; }
+  .search-results-panel { border-top-color: rgba(130, 222, 244, 0.14); }
+  .suggestion-row { color: #edfaff !important; }
+  .suggestion-row ion-icon { color: #71cce2; }
+  .suggestion-row:hover { background: rgba(80, 190, 218, 0.12) !important; }
+}
+
+.directions-action-btn,
+.start-navigation-bar button {
+  background: #03a9c9;
+  color: #06232d;
+}
+
+.start-navigation-bar .route-info-group span { color: #a8d9e4; }
+
+.hud-widget {
+  box-shadow: 0 7px 20px rgba(0, 7, 12, 0.34);
+
+  .hud-caption, .hud-gforce-unit, .proximity-spike-val { color: #9fc6cf !important; }
+  .hud-gforce-number, .proximity-distance { color: #f3fbfd !important; }
+}
+
+.next-turn-card {
+  box-shadow: 0 8px 22px rgba(0, 7, 12, 0.38);
+
+  .navigation-accent {
+    background: #113d4e;
+    border: 1px solid rgba(130, 222, 244, 0.28);
+    color: #54d7f5;
+  }
+}
+
+.then-turn-card { border-top: 0; }
+.navigation-side-controls button { box-shadow: 0 4px 10px rgba(0, 7, 12, 0.36); }
+
+.report-road-button {
+  bottom: calc(270px + env(safe-area-inset-bottom));
+  ion-icon { color: #ffd178; }
+}
+
+.active-trip-tray {
+  box-shadow: 0 -4px 18px rgba(0, 7, 12, 0.35);
+  .trip-time span { color: #a8d9e4; }
+  .route-options { background: #113d4e; border: 1px solid rgba(130, 222, 244, 0.22); }
+  .exit-trip { background: #dd4a47; }
+}
+
+/* Keep hazard awareness visible while following turns, above the trip tray. */
+.map-floating-hud.navigation-hud {
+  bottom: calc(136px + env(safe-area-inset-bottom));
+  z-index: 170;
+}
+
+@media (max-width: 480px) {
+  .map-floating-hud.navigation-hud { bottom: calc(132px + env(safe-area-inset-bottom)); }
+  .report-road-button { bottom: calc(264px + env(safe-area-inset-bottom)); }
 }
