@@ -71,7 +71,7 @@ export class TripSummaryPage implements OnInit, OnDestroy {
   }
 
   /** Placeholder for the actual PWD/NHAI agency API integration. */
-  private async submitToAgency(payload: HazardSubmissionPayload): Promise<void> {
-    console.log('Submitting hazards to civic agency:', payload);
+  private async submitToAgency(_payload: HazardSubmissionPayload): Promise<void> {
+    return Promise.resolve();
   }
 }

@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { PwaUpdateService } from './services/pwa-update.service';
 
 @Component({
   selector: 'app-root',
@@ -7,5 +8,7 @@ import { Component } from '@angular/core';
   standalone: false,
 })
 export class AppComponent {
-  constructor() {}
+  constructor(private readonly pwaUpdate: PwaUpdateService) {
+    this.pwaUpdate.init();
+  }
 }

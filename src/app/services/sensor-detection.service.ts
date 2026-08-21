@@ -1,9 +1,14 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { Motion, type AccelListenerEvent } from '@capacitor/motion';
 import { Geolocation } from '@capacitor/geolocation';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { PotholeReport, HazardSeverity } from '../models/pothole-report.model';
+import { ReportStorageService } from './report-storage.service';
+
+/** Batches rapid successive queue updates (e.g. bulk markSubmitted) into a single IndexedDB write. */
+const PERSIST_DEBOUNCE_MS = 400;
 
 /** Standard gravity, used as the baseline to subtract from raw accelerometer readings. */
 const GRAVITY_G = 9.80665;
@@ -66,6 +71,29 @@ export class SensorDetectionService implements OnDestroy {
   readonly locationPermissionState$: Observable<PermissionState> = this.locationPermissionSubject.asObservable();
 
   private listening = false;
+
+  constructor(private readonly reportStorage: ReportStorageService) {
+    void this.restorePersistedReports();
+    this.pendingReports$.pipe(debounceTime(PERSIST_DEBOUNCE_MS)).subscribe((reports) => this.persistReports(reports));
+  }
+
+  /** Auto-resume: reloads any reports left over from a killed/frozen tab before the user notices. */
+  private async restorePersistedReports(): Promise<void> {
+    try {
+      const stored = await this.reportStorage.loadAll();
+      if (stored.length) {
+        this.pendingReportsSubject.next(stored);
+      }
+    } catch (error) {
+      console.warn('BumpAlert: unable to restore persisted reports', error);
+    }
+  }
+
+  private persistReports(reports: PotholeReport[]): void {
+    void this.reportStorage.replaceAll(reports).catch((error) => {
+      console.warn('BumpAlert: unable to persist pending reports', error);
+    });
+  }
 
   async startListening(): Promise<void> {
     if (this.listening) {

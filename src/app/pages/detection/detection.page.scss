@@ -6,6 +6,62 @@
   --padding-end: 12px;
 }
 
+.layout-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.main-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.col-detection,
+.col-readouts {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Bike/car mount is typically rotated to landscape - lay the Detection and Live sensor
+   readings cards out side by side. The columns stretch to equal height and the pending
+   detections card grows to fill whatever space the shorter column leaves unused, instead
+   of leaving a blank gap under the shorter card. */
+@media (orientation: landscape) {
+  .main-row {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .col-detection,
+  .col-readouts {
+    flex: 1 1 0;
+  }
+
+  .list-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .list-card ion-card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* Landscape has enough width per chip to keep the label and status badge on one line. */
+  .permission-chip {
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+  }
+}
+
 .header-card {
   padding: 2px 0 4px;
 }
@@ -83,15 +139,19 @@ h1 {
 
 .permission-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
 }
 
 .permission-chip {
   flex: 1;
+  min-width: 90px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 6px;
   padding: 6px 10px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
@@ -99,6 +159,7 @@ h1 {
   color: #9aa5b8;
 
   ion-badge {
+    margin-bottom: 5px;
     font-size: 0.62rem;
   }
 }
@@ -246,24 +307,45 @@ ion-progress-bar {
 }
 
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+  margin: 0;
   text-align: center;
   color: #8b95a8;
-  padding: 8px 0;
-  font-size: 0.82rem;
+  padding: 6px 0;
+  font-size: 0.78rem;
+}
+
+.list-card-header {
+  padding-bottom: 6px;
+}
+
+/* ion-card-header's own shadow layout stacks/centers slotted children, so the
+   icon + title are wrapped in a plain div we control to force a single row. */
+.list-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 
   ion-icon {
-    font-size: 26px;
+    flex-shrink: 0;
+    font-size: 16px;
+    color: #8b95a8;
+  }
+
+  ion-card-title {
+    font-size: 0.92rem;
   }
 }
 
 .bottom-actions {
   padding: 8px 0 12px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  justify-content: center;
+  gap: 10px;
+}
+
+.bottom-actions ion-button {
+  flex: 0 1 120px;
+  max-width: 120px;
+  margin: 0;
 }

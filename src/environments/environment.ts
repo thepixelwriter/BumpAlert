@@ -4,7 +4,7 @@
 
 export const environment = {
   production: false,
-  // Get a key from https://console.cloud.google.com/google/maps-apis - see chat instructions.
+  // Get a key from https://console.cloud.google.com/google/maps-apis and restrict it to this app's origin.
   googleMapsApiKey: 'AIzaSyCAsMq8V0guKfNoricQXc3zQ-OCUqfUCJI'
 };
 

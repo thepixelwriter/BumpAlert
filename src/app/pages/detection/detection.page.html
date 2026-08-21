@@ -1,170 +1,182 @@
 <ion-content [fullscreen]="true" class="detection-page">
-  <div class="header-card">
-    <p class="eyebrow">BumpAlert</p>
-    <h1>Pothole Detection</h1>
-  </div>
+  <div class="layout-grid">
+    <div class="header-card">
+      <p class="eyebrow">BumpAlert</p>
+      <h1>Pothole Detection</h1>
+    </div>
 
-  <ion-card class="status-card">
-    <ion-card-content>
-      <div class="status-row">
-        <div>
-          <div class="label">Detection</div>
-          <div class="value" [class.value-on]="detectionEnabled">{{ detectionEnabled ? 'ON' : 'OFF' }}</div>
-        </div>
-        <ion-toggle [checked]="detectionEnabled" (ionChange)="toggleDetection()"></ion-toggle>
+    <div class="main-row">
+      <div class="col-detection">
+        <ion-card class="status-card">
+          <ion-card-content>
+            <div class="status-row">
+              <div>
+                <div class="label">Detection</div>
+                <div class="value" [class.value-on]="detectionEnabled">{{ detectionEnabled ? 'ON' : 'OFF' }}</div>
+              </div>
+              <ion-toggle [checked]="detectionEnabled" (ionChange)="toggleDetection()"></ion-toggle>
+            </div>
+
+            <div class="status-message">{{ statusMessage }}</div>
+
+            <ion-button
+              *ngIf="awaitingMotionPermission"
+              expand="block"
+              size="small"
+              color="primary"
+              class="permission-btn"
+              (click)="enableMotionAccess()"
+            >
+              <ion-icon slot="start" name="lock-open-outline"></ion-icon>
+              Enable Motion Access
+            </ion-button>
+
+            <div class="permission-row">
+              <div class="permission-chip">
+                <span>Motion</span>
+                <ion-badge [color]="permissionColor(motionPermission)">{{ permissionLabel(motionPermission) }}</ion-badge>
+              </div>
+              <div class="permission-chip">
+                <span>Location</span>
+                <ion-badge [color]="permissionColor(locationPermission)">{{ permissionLabel(locationPermission) }}</ion-badge>
+              </div>
+              <div class="permission-chip" *ngIf="wakeLockSupported">
+                <span>Screen lock</span>
+                <ion-badge [color]="wakeLockActive ? 'success' : 'medium'">{{ wakeLockActive ? 'Active' : 'Inactive' }}</ion-badge>
+              </div>
+            </div>
+
+            <div class="meter-block">
+              <div class="meter-label">
+                <span>Impact strength</span>
+                <strong>{{ currentGForce.toFixed(2) }}g</strong>
+              </div>
+              <ion-progress-bar [value]="meterPercent / 100" [color]="meterColor"></ion-progress-bar>
+
+              <div class="sparkline">
+                <div
+                  class="spark-bar"
+                  *ngFor="let sample of sparkline"
+                  [style.height.%]="(sample / 3) * 100"
+                  [class.spark-bar-hot]="sample >= 1.8"
+                ></div>
+              </div>
+            </div>
+
+            <div class="counts-row">
+              <div class="count-chip mild">
+                <span>Mild</span>
+                <strong>{{ mildCount }}</strong>
+              </div>
+              <div class="count-chip severe">
+                <span>Severe</span>
+                <strong>{{ severeCount }}</strong>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
       </div>
 
-      <div class="status-message">{{ statusMessage }}</div>
+      <div class="col-readouts">
+        <ion-card class="readout-card">
+          <ion-card-content>
+            <div class="readout-title">Live sensor readings</div>
 
-      <ion-button
-        *ngIf="awaitingMotionPermission"
-        expand="block"
-        size="small"
-        color="primary"
-        class="permission-btn"
-        (click)="enableMotionAccess()"
-      >
-        <ion-icon slot="start" name="lock-open-outline"></ion-icon>
-        Enable Motion Access
+            <div class="readout-grid">
+              <div class="readout-cell">
+                <span>Accel X</span>
+                <strong>{{ liveAcceleration.x.toFixed(2) }}</strong>
+              </div>
+              <div class="readout-cell">
+                <span>Accel Y</span>
+                <strong>{{ liveAcceleration.y.toFixed(2) }}</strong>
+              </div>
+              <div class="readout-cell">
+                <span>Accel Z</span>
+                <strong>{{ liveAcceleration.z.toFixed(2) }}</strong>
+              </div>
+            </div>
+
+            <div class="readout-grid" *ngIf="liveLocation; else noLocation">
+              <div class="readout-cell wide">
+                <span>Latitude</span>
+                <strong>{{ liveLocation.latitude.toFixed(6) }}</strong>
+              </div>
+              <div class="readout-cell wide">
+                <span>Longitude</span>
+                <strong>{{ liveLocation.longitude.toFixed(6) }}</strong>
+              </div>
+              <div class="readout-cell">
+                <span>Accuracy</span>
+                <strong>{{ liveLocation.accuracy ? (liveLocation.accuracy | number: '1.0-0') + 'm' : '—' }}</strong>
+              </div>
+            </div>
+            <ng-template #noLocation>
+              <p class="readout-empty">Waiting for GPS fix…</p>
+            </ng-template>
+          </ion-card-content>
+        </ion-card>
+
+        <ion-card class="info-card" *ngIf="lastDetected">
+          <ion-card-header>
+            <ion-card-title>Last detected bump</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="meta-row">
+              <span>Severity</span>
+              <strong>{{ lastDetected.severity }}</strong>
+            </div>
+            <div class="meta-row">
+              <span>Intensity</span>
+              <strong>{{ lastDetected.gForce.toFixed(2) }}g</strong>
+            </div>
+            <div class="meta-row">
+              <span>Time</span>
+              <strong>{{ lastDetected.timestamp | date: 'shortTime' }}</strong>
+            </div>
+            <div class="meta-row">
+              <span>Location</span>
+              <strong>{{ lastDetected.latitude.toFixed(5) }}, {{ lastDetected.longitude.toFixed(5) }}</strong>
+            </div>
+          </ion-card-content>
+        </ion-card>
+
+        <ion-card class="list-card">
+          <ion-card-header class="list-card-header">
+            <div class="list-card-title-row">
+              <ion-icon name="shield-checkmark-outline"></ion-icon>
+              <ion-card-title>Pending detections</ion-card-title>
+            </div>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-list *ngIf="pendingReports.length; else noReports">
+              <ion-item *ngFor="let report of pendingReports" lines="full">
+                <ion-label>
+                  <h3>{{ report.severity | titlecase }} bump</h3>
+                  <p>{{ report.gForce.toFixed(2) }}g • {{ report.timestamp | date: 'shortTime' }}</p>
+                </ion-label>
+                <ion-badge [color]="report.severity === 'severe' ? 'danger' : 'warning'">
+                  {{ report.status }}
+                </ion-badge>
+              </ion-item>
+            </ion-list>
+
+            <ng-template #noReports>
+              <p class="empty-state">No bumps yet — ride on.</p>
+            </ng-template>
+          </ion-card-content>
+        </ion-card>
+      </div>
+    </div>
+
+    <div class="bottom-actions">
+      <ion-button size="small" fill="solid" color="primary" [disabled]="!pendingReports.length" (click)="exportReports()">
+        <ion-icon slot="start" name="download-outline"></ion-icon>
+        Export
       </ion-button>
-
-      <div class="permission-row">
-        <div class="permission-chip">
-          <span>Motion</span>
-          <ion-badge [color]="permissionColor(motionPermission)">{{ permissionLabel(motionPermission) }}</ion-badge>
-        </div>
-        <div class="permission-chip">
-          <span>Location</span>
-          <ion-badge [color]="permissionColor(locationPermission)">{{ permissionLabel(locationPermission) }}</ion-badge>
-        </div>
-      </div>
-
-      <div class="meter-block">
-        <div class="meter-label">
-          <span>Impact strength</span>
-          <strong>{{ currentGForce.toFixed(2) }}g</strong>
-        </div>
-        <ion-progress-bar [value]="meterPercent / 100" [color]="meterColor"></ion-progress-bar>
-
-        <div class="sparkline">
-          <div
-            class="spark-bar"
-            *ngFor="let sample of sparkline"
-            [style.height.%]="(sample / 3) * 100"
-            [class.spark-bar-hot]="sample >= 1.8"
-          ></div>
-        </div>
-      </div>
-
-      <div class="counts-row">
-        <div class="count-chip mild">
-          <span>Mild</span>
-          <strong>{{ mildCount }}</strong>
-        </div>
-        <div class="count-chip severe">
-          <span>Severe</span>
-          <strong>{{ severeCount }}</strong>
-        </div>
-      </div>
-    </ion-card-content>
-  </ion-card>
-
-  <ion-card class="readout-card">
-    <ion-card-content>
-      <div class="readout-title">Live sensor readings</div>
-
-      <div class="readout-grid">
-        <div class="readout-cell">
-          <span>Accel X</span>
-          <strong>{{ liveAcceleration.x.toFixed(2) }}</strong>
-        </div>
-        <div class="readout-cell">
-          <span>Accel Y</span>
-          <strong>{{ liveAcceleration.y.toFixed(2) }}</strong>
-        </div>
-        <div class="readout-cell">
-          <span>Accel Z</span>
-          <strong>{{ liveAcceleration.z.toFixed(2) }}</strong>
-        </div>
-      </div>
-
-      <div class="readout-grid" *ngIf="liveLocation; else noLocation">
-        <div class="readout-cell wide">
-          <span>Latitude</span>
-          <strong>{{ liveLocation.latitude.toFixed(6) }}</strong>
-        </div>
-        <div class="readout-cell wide">
-          <span>Longitude</span>
-          <strong>{{ liveLocation.longitude.toFixed(6) }}</strong>
-        </div>
-        <div class="readout-cell">
-          <span>Accuracy</span>
-          <strong>{{ liveLocation.accuracy ? (liveLocation.accuracy | number: '1.0-0') + 'm' : '—' }}</strong>
-        </div>
-      </div>
-      <ng-template #noLocation>
-        <p class="readout-empty">Waiting for GPS fix…</p>
-      </ng-template>
-    </ion-card-content>
-  </ion-card>
-
-  <ion-card class="info-card" *ngIf="lastDetected">
-    <ion-card-header>
-      <ion-card-title>Last detected bump</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <div class="meta-row">
-        <span>Severity</span>
-        <strong>{{ lastDetected.severity }}</strong>
-      </div>
-      <div class="meta-row">
-        <span>Intensity</span>
-        <strong>{{ lastDetected.gForce.toFixed(2) }}g</strong>
-      </div>
-      <div class="meta-row">
-        <span>Time</span>
-        <strong>{{ lastDetected.timestamp | date: 'shortTime' }}</strong>
-      </div>
-      <div class="meta-row">
-        <span>Location</span>
-        <strong>{{ lastDetected.latitude.toFixed(5) }}, {{ lastDetected.longitude.toFixed(5) }}</strong>
-      </div>
-    </ion-card-content>
-  </ion-card>
-
-  <ion-card class="list-card">
-    <ion-card-header>
-      <ion-card-title>Pending detections</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-list *ngIf="pendingReports.length; else noReports">
-        <ion-item *ngFor="let report of pendingReports" lines="full">
-          <ion-label>
-            <h3>{{ report.severity | titlecase }} bump</h3>
-            <p>{{ report.gForce.toFixed(2) }}g • {{ report.timestamp | date: 'shortTime' }}</p>
-          </ion-label>
-          <ion-badge [color]="report.severity === 'severe' ? 'danger' : 'warning'">
-            {{ report.status }}
-          </ion-badge>
-        </ion-item>
-      </ion-list>
-
-      <ng-template #noReports>
-        <div class="empty-state">
-          <ion-icon name="shield-checkmark-outline"></ion-icon>
-          <p>No bump detected yet. Detection is active — move the device or drive over a rough patch.</p>
-        </div>
-      </ng-template>
-    </ion-card-content>
-  </ion-card>
-
-  <div class="bottom-actions">
-    <ion-button expand="block" size="small" fill="outline" [disabled]="!pendingReports.length" (click)="exportReports()">
-      <ion-icon slot="start" name="download-outline"></ion-icon>
-      Export detections (JSON)
-    </ion-button>
-    <ion-button expand="block" size="small" color="medium" fill="clear" (click)="clearReports()">
-      Clear detections
-    </ion-button>
+      <ion-button size="small" fill="solid" color="medium" (click)="clearReports()">
+        Clear
+      </ion-button>
+    </div>
   </div>
 </ion-content>
