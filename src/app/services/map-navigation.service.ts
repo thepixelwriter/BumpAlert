@@ -56,13 +56,18 @@ export class MapNavigationService implements OnDestroy {
     if (maps.places?.AutocompleteService) {
       const autocomplete = new maps.places.AutocompleteService();
       const predictions = await new Promise<google.maps.places.AutocompletePrediction[]>((resolve, reject) => {
-        autocomplete.getPlacePredictions({ input: trimmed, types: ['geocode'] }, (results, status) => {
+        autocomplete.getPlacePredictions({ input: trimmed }, (results, status) => {
           if (status === maps.places.PlacesServiceStatus.ZERO_RESULTS) return resolve([]);
           if (status !== maps.places.PlacesServiceStatus.OK || !results) return reject(new Error(`Place search failed with status ${status}`));
           resolve(results);
         });
       });
-      return Promise.all(predictions.slice(0, 5).map((prediction) => this.resolvePlace(prediction.place_id, prediction.description)));
+      return Promise.all(
+        predictions
+          .filter((prediction) => Boolean(prediction.place_id))
+          .slice(0, 5)
+          .map((prediction) => this.resolvePlace(prediction.place_id, prediction.description)),
+      );
     }
 
     const geocoder = new maps.Geocoder();

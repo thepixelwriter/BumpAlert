@@ -151,6 +151,8 @@
             <span class="sugg-label">{{ result.label }}</span>
           </div>
         </div>
+
+        <p class="search-message" *ngIf="searchMessage">{{ searchMessage }}</p>
       </div>
 
       <p class="routing-msg-error" *ngIf="routingError">{{ routingError }}</p>

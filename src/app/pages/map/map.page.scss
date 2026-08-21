@@ -51,15 +51,16 @@
 /* 1. Integrated Glassmorphic Floating HUD Layer */
 .map-floating-hud {
   position: absolute;
-  top: calc(80px + env(safe-area-inset-top));
+  top: auto;
+  bottom: calc(84px + env(safe-area-inset-bottom));
   left: 16px;
-  right: 16px;
+  right: 76px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
   pointer-events: none;
-  z-index: 100;
+  z-index: 110;
 }
 
 .hud-widget {
@@ -303,9 +304,9 @@
   position: absolute;
   top: calc(12px + env(safe-area-inset-top));
   left: 16px;
-  right: 76px;
+  right: 16px;
   max-width: 420px;
-  z-index: 100;
+  z-index: 140;
 }
 
 .search-glass-card {
@@ -367,7 +368,7 @@
   }
 
   .suggestions-drop {
-    max-height: 130px;
+    max-height: min(42vh, 280px);
     overflow-y: auto;
     border-top: 1px solid rgba(var(--ion-text-color-rgb), 0.06);
     padding: 4px 0;
@@ -397,6 +398,13 @@
         line-height: 1.35;
       }
     }
+  }
+
+  .search-message {
+    margin: 4px 4px 0;
+    color: var(--ion-color-step-400);
+    font-size: 0.75rem;
+    line-height: 1.35;
   }
 
   .routing-msg-error {
@@ -440,11 +448,33 @@
 /* 4. Active Route Summary Bar */
 .route-summary-bar {
   position: absolute;
-  bottom: calc(24px + env(safe-area-inset-bottom));
+  top: calc(16px + env(safe-area-inset-top));
+  bottom: auto;
   left: 16px;
   right: 76px;
   max-width: 360px;
   z-index: 100;
+}
+
+@media (max-width: 480px) {
+  .map-floating-hud {
+    left: 12px;
+    right: 68px;
+    gap: 8px;
+  }
+
+  .hud-widget {
+    padding: 8px 10px;
+  }
+
+  .proximity-hud-widget {
+    max-width: 150px;
+  }
+
+  .search-panel-overlay {
+    left: 12px;
+    right: 12px;
+  }
 }
 
 .route-summary-glass {

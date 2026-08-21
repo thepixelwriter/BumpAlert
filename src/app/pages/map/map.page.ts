@@ -1,6 +1,6 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Subject, Subscription, firstValueFrom, of } from 'rxjs';
-import { catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { ToastController } from '@ionic/angular';
 import { SensorDetectionService, LiveAcceleration, LiveLocation, PermissionState } from '../../services/sensor-detection.service';
 import { MapNavigationService } from '../../services/map-navigation.service';
@@ -43,6 +43,7 @@ export class MapPage implements OnInit, OnDestroy {
   toText = '';
   toResults: GeocodeResult[] = [];
   selectedTo: GeocodeResult | null = null;
+  searchMessage: string | null = null;
   routingInProgress = false;
   routingError: string | null = null;
   routeCalculated = false;
@@ -133,7 +134,12 @@ export class MapPage implements OnInit, OnDestroy {
         distinctUntilChanged(),
         switchMap((query) => this.safeGeocode(query)),
       )
-      .subscribe((results) => (this.toResults = results));
+      .subscribe((results) => {
+        this.toResults = results;
+        if (this.toText.trim().length >= 3 && results.length === 0 && !this.searchMessage) {
+          this.searchMessage = 'No destinations found.';
+        }
+      });
 
     await this.mapNavigation.startTracking();
 
@@ -415,6 +421,8 @@ export class MapPage implements OnInit, OnDestroy {
   onToInput(value: string): void {
     this.toText = value;
     this.selectedTo = null;
+    this.routeCalculated = false;
+    this.searchMessage = value.trim().length ? null : 'Enter a destination to search.';
     this.toQuery$.next(value);
   }
 
@@ -424,6 +432,7 @@ export class MapPage implements OnInit, OnDestroy {
     this.toResults = [];
     this.routeCalculated = false;
     this.routingError = null;
+    this.searchMessage = null;
     this.destinationMarker?.setMap(null);
     this.destinationMarker = new google.maps.Marker({
       position: { lat: result.latitude, lng: result.longitude }, map: this.map, title: result.label,
@@ -526,12 +535,12 @@ export class MapPage implements OnInit, OnDestroy {
   }
 
   private async safeGeocode(query: string): Promise<GeocodeResult[]> {
-    return firstValueFrom(
-      of(query).pipe(
-        switchMap((q) => this.mapNavigation.geocodeAddress(q)),
-        catchError(() => of<GeocodeResult[]>([])),
-      ),
-      { defaultValue: [] },
-    );
+    try {
+      return await firstValueFrom(of(query).pipe(switchMap((q) => this.mapNavigation.geocodeAddress(q))), { defaultValue: [] });
+    } catch (error) {
+      console.warn('Destination search failed', error);
+      this.searchMessage = 'Unable to search destinations right now.';
+      return [];
+    }
   }
 }
