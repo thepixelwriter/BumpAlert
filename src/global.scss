@@ -35,12 +35,3 @@
 @import "@ionic/angular/css/palettes/dark.always.css";
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 /* @import "@ionic/angular/css/palettes/dark.system.css"; */
-
-/** Brand wordmark used in each page's toolbar in place of a per-page title. */
-ion-title.brand-title {
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 800;
-  font-size: 0.95rem;
-  color: var(--ion-color-primary);
-}

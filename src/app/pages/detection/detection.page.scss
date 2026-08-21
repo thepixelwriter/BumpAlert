@@ -1,5 +1,6 @@
 .detection-page {
   --ion-background-color: #0c1016;
+  --padding-top: max(10px, env(safe-area-inset-top));
   --padding-bottom: max(14px, env(safe-area-inset-bottom));
   --padding-start: 12px;
   --padding-end: 12px;
@@ -59,6 +60,26 @@
     align-items: center;
     gap: 0;
   }
+}
+
+.header-card {
+  padding: 2px 0 4px;
+}
+
+.eyebrow {
+  margin: 0 0 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.62rem;
+  color: var(--ion-color-primary);
+  font-weight: 700;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #f4f6fb;
 }
 
 .status-card,
