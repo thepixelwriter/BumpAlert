@@ -231,90 +231,126 @@ export class SensorDetectionService implements OnDestroy {
   }
 
   private handleAccelEvent(event: AccelListenerEvent): void {
-    const zAcceleration = this.extractGravityInclusiveZ(event);
-    if (zAcceleration === null) {
-      return;
-    }
+    const axes = this.extractAxes(event);
+    this.liveAccelerationSubject.next(axes);
 
-    this.liveAccelerationSubject.next(this.extractAxes(event, zAcceleration));
-    this.liveGForceSubject.next(this.toGForce(zAcceleration));
+    const gForce = this.calculateGForce(event, axes);
+    this.liveGForceSubject.next(gForce);
 
     const now = Date.now();
     if (now - this.lastDetectionAt < DETECTION_COOLDOWN_MS) {
       return;
     }
 
-    const severity = this.classifySpike(zAcceleration);
+    const severity = this.classifyGForce(gForce);
     if (!severity) {
       return;
     }
 
     this.lastDetectionAt = now;
-    const gForce = this.toGForce(zAcceleration);
     void this.captureDetection(gForce, severity);
   }
 
-  /** iOS Safari frequently leaves the gravity-excluded `acceleration` field null; `accelerationIncludingGravity` is reliable. */
-  private extractGravityInclusiveZ(event: AccelListenerEvent): number | null {
-    const withGravity = event.accelerationIncludingGravity?.z;
-    if (typeof withGravity === 'number') {
-      return withGravity;
+  /** Calculates G-Force delta using full 3D vector magnitude for any device orientation. */
+  private calculateGForce(event: AccelListenerEvent, axes: LiveAcceleration): number {
+    // 1. If linear acceleration (gravity excluded) is directly provided:
+    if (
+      event.acceleration &&
+      (typeof event.acceleration.x === 'number' ||
+        typeof event.acceleration.y === 'number' ||
+        typeof event.acceleration.z === 'number')
+    ) {
+      const ax = event.acceleration.x ?? 0;
+      const ay = event.acceleration.y ?? 0;
+      const az = event.acceleration.z ?? 0;
+      const magnitude = Math.sqrt(ax * ax + ay * ay + az * az);
+      return Math.round((magnitude / GRAVITY_G) * 100) / 100;
     }
-    const withoutGravity = event.acceleration?.z;
-    if (typeof withoutGravity === 'number') {
-      return withoutGravity + GRAVITY_G;
+
+    // 2. If gravity-inclusive acceleration is provided:
+    if (
+      event.accelerationIncludingGravity &&
+      (typeof event.accelerationIncludingGravity.x === 'number' ||
+        typeof event.accelerationIncludingGravity.y === 'number' ||
+        typeof event.accelerationIncludingGravity.z === 'number')
+    ) {
+      const gx = event.accelerationIncludingGravity.x ?? 0;
+      const gy = event.accelerationIncludingGravity.y ?? 0;
+      const gz = event.accelerationIncludingGravity.z ?? 0;
+      const totalMag = Math.sqrt(gx * gx + gy * gy + gz * gz);
+      const delta = Math.abs(totalMag - GRAVITY_G) / GRAVITY_G;
+      return Math.round(delta * 100) / 100;
     }
-    return null;
+
+    // Fallback:
+    const mag = Math.sqrt(axes.x * axes.x + axes.y * axes.y + axes.z * axes.z);
+    return Math.round((Math.abs(mag - GRAVITY_G) / GRAVITY_G) * 100) / 100;
   }
 
-  /** X/Y for the live readout - reuses whichever field was populated for Z above. */
-  private extractAxes(event: AccelListenerEvent, resolvedZ: number): LiveAcceleration {
-    const source = event.accelerationIncludingGravity?.z != null ? event.accelerationIncludingGravity : event.acceleration;
+  /** X/Y/Z axes for live telemetry readout. */
+  private extractAxes(event: AccelListenerEvent): LiveAcceleration {
+    const src =
+      event.accelerationIncludingGravity?.z != null
+        ? event.accelerationIncludingGravity
+        : event.acceleration;
     return {
-      x: source?.x ?? 0,
-      y: source?.y ?? 0,
-      z: resolvedZ,
+      x: Math.round((src?.x ?? 0) * 100) / 100,
+      y: Math.round((src?.y ?? 0) * 100) / 100,
+      z: Math.round((src?.z ?? 0) * 100) / 100,
     };
   }
 
-  /** Converts a raw Z-axis reading (m/s^2) into a G-force delta and classifies severity. */
-  private classifySpike(zAcceleration: number): HazardSeverity | null {
-    const gForceDelta = this.toGForce(zAcceleration);
-    if (gForceDelta >= ALARMING_G_THRESHOLD) {
+  /** Converts G-Force reading into severity classification. */
+  private classifyGForce(gForce: number): HazardSeverity | null {
+    if (gForce >= ALARMING_G_THRESHOLD) {
       return 'alarming';
     }
-    if (gForceDelta >= SEVERE_G_THRESHOLD) {
+    if (gForce >= SEVERE_G_THRESHOLD) {
       return 'severe';
     }
-    if (gForceDelta >= MODERATE_G_THRESHOLD) {
+    if (gForce >= MODERATE_G_THRESHOLD) {
       return 'moderate';
     }
     return null;
   }
 
-  private toGForce(zAcceleration: number): number {
-    return Math.abs(Math.abs(zAcceleration) - GRAVITY_G) / GRAVITY_G;
+  /** Simulates a bump spike detection for verification / testing. */
+  simulateSpike(gForce = 4.2): void {
+    const severity = this.classifyGForce(gForce) ?? 'alarming';
+    this.liveGForceSubject.next(gForce);
+    void this.captureDetection(gForce, severity);
   }
 
   private async captureDetection(gForce: number, severity: HazardSeverity): Promise<void> {
     const timestamp = Date.now();
-    try {
-      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
-      const report: PotholeReport = {
-        id: `${timestamp}-${Math.round(gForce * 1000)}`,
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        timestamp,
-        gForce,
-        severity,
-        status: 'pending',
-      };
-      this.addPendingReport(report);
-      this.potholeDetectedSubject.next(report);
-    } catch (error) {
-      // Location unavailable (e.g. GPS lock lost) - drop this detection rather than crash the ride.
-      console.warn('BumpAlert: unable to capture location for detected spike', error);
+    let latitude = 28.4328;
+    let longitude = 77.5035;
+
+    const liveLoc = this.liveLocationSubject.value;
+    if (liveLoc) {
+      latitude = liveLoc.latitude;
+      longitude = liveLoc.longitude;
     }
+
+    try {
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 3500 });
+      latitude = position.coords.latitude;
+      longitude = position.coords.longitude;
+    } catch {
+      // Use live location or fallback
+    }
+
+    const report: PotholeReport = {
+      id: `${timestamp}-${Math.round(gForce * 1000)}`,
+      latitude,
+      longitude,
+      timestamp,
+      gForce,
+      severity,
+      status: 'pending',
+    };
+    this.addPendingReport(report);
+    this.potholeDetectedSubject.next(report);
   }
 
   private addPendingReport(report: PotholeReport): void {

@@ -4,6 +4,7 @@ import { ToastController, AlertController } from '@ionic/angular';
 import { HazardSeverity, PotholeReport, TelemetryCluster } from '../../models/pothole-report.model';
 import { TelemetryService } from '../../services/telemetry.service';
 import { GrievanceShareService } from '../../services/grievance-share.service';
+import { SensorDetectionService } from '../../services/sensor-detection.service';
 
 @Component({
   selector: 'app-review',
@@ -25,13 +26,19 @@ export class ReviewPage implements OnInit, OnDestroy {
   moderateCount = 0;
   maxGForce = 0;
 
+  // Live telemetry streaming from sensors
+  liveGForce = 0;
+  isDemoMode = false;
   isSharing = false;
 
   private clusterSub?: Subscription;
   private rawReportsSub?: Subscription;
+  private gForceSub?: Subscription;
+  private demoSub?: Subscription;
 
   constructor(
     private readonly telemetryService: TelemetryService,
+    private readonly sensorDetection: SensorDetectionService,
     private readonly grievanceShare: GrievanceShareService,
     private readonly toastCtrl: ToastController,
     private readonly alertCtrl: AlertController,
@@ -40,7 +47,6 @@ export class ReviewPage implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.clusterSub = this.telemetryService.clusters$.subscribe((clusters) => {
       this.clusters = clusters;
-      // Clusters remain collapsed by default
     });
 
     this.rawReportsSub = this.telemetryService.rawReports$.subscribe((reports) => {
@@ -51,11 +57,21 @@ export class ReviewPage implements OnInit, OnDestroy {
       this.moderateCount = reports.filter((r) => r.severity === 'moderate').length;
       this.maxGForce = reports.reduce((max, r) => Math.max(max, r.gForce), 0);
     });
+
+    this.gForceSub = this.sensorDetection.liveGForce$.subscribe((g) => {
+      this.liveGForce = g;
+    });
+
+    this.demoSub = this.telemetryService.isDemoMode$.subscribe((demo) => {
+      this.isDemoMode = demo;
+    });
   }
 
   ngOnDestroy(): void {
     this.clusterSub?.unsubscribe();
     this.rawReportsSub?.unsubscribe();
+    this.gForceSub?.unsubscribe();
+    this.demoSub?.unsubscribe();
   }
 
   get unsubmittedCount(): number {
@@ -162,6 +178,44 @@ export class ReviewPage implements OnInit, OnDestroy {
   resetSeedData(): void {
     this.telemetryService.resetToSeedData();
     this.expandedClusterIds.clear();
+    void this.toastCtrl.create({
+      message: 'Sample Greater Noida dataset loaded (38 events)',
+      duration: 2000,
+      position: 'bottom',
+    }).then((t) => t.present());
+  }
+
+  async clearAllData(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: 'Clear All Telemetry',
+      message: 'Remove all recorded impact detections and start fresh with 0 reports?',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Clear All',
+          role: 'destructive',
+          handler: () => {
+            this.telemetryService.clearAll();
+            this.expandedClusterIds.clear();
+            void this.toastCtrl.create({
+              message: 'All telemetry records cleared. Ready for live ride sensing.',
+              duration: 2500,
+              position: 'bottom',
+            }).then((t) => t.present());
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  simulateTestBump(): void {
+    this.sensorDetection.simulateSpike(4.25);
+    void this.toastCtrl.create({
+      message: 'Simulated 4.25G alarming bump captured!',
+      duration: 2000,
+      position: 'bottom',
+    }).then((t) => t.present());
   }
 
   getDominantSeverityLabel(severity: HazardSeverity): string {

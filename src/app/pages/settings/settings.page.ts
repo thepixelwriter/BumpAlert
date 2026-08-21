@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { ToastController, AlertController } from '@ionic/angular';
 import { TelemetryService } from '../../services/telemetry.service';
 import { WakeLockService } from '../../services/wake-lock.service';
-import { SensorDetectionService } from '../../services/sensor-detection.service';
+import { SensorDetectionService, LiveAcceleration, PermissionState } from '../../services/sensor-detection.service';
 
 @Component({
   selector: 'app-settings',
@@ -10,7 +11,7 @@ import { SensorDetectionService } from '../../services/sensor-detection.service'
   styleUrls: ['./settings.page.scss'],
   standalone: false,
 })
-export class SettingsPage implements OnInit {
+export class SettingsPage implements OnInit, OnDestroy {
   // Appearance Preferences
   selectedTheme = 'midnight'; // 'midnight' | 'amoled'
   mapStyle = 'automotive'; // 'automotive' | 'satellite' | 'terrain'
@@ -21,6 +22,13 @@ export class SettingsPage implements OnInit {
   keepScreenAwake = true;
   detectionSensitivity = 'normal'; // 'sensitive' | 'normal' | 'relaxed'
 
+  // Live Sensor Readouts
+  liveGForce = 0;
+  liveAxes: LiveAcceleration = { x: 0, y: 0, z: 0 };
+  permissionState: PermissionState = 'unknown';
+  isSensingActive = false;
+  isDemoMode = false;
+
   // Civic Agency Integration
   autoSubmitConfirmed = false;
   selectedAgency = 'nhai_pwd';
@@ -28,6 +36,11 @@ export class SettingsPage implements OnInit {
   // Device Info
   appVersion = '1.2.0';
   buildNumber = '2026.08.21';
+
+  private gForceSub?: Subscription;
+  private accelSub?: Subscription;
+  private permSub?: Subscription;
+  private demoSub?: Subscription;
 
   constructor(
     private readonly telemetryService: TelemetryService,
@@ -46,6 +59,30 @@ export class SettingsPage implements OnInit {
 
     const savedWake = localStorage.getItem('bumpalert_wake');
     if (savedWake !== null) this.keepScreenAwake = savedWake === 'true';
+
+    this.gForceSub = this.sensorDetection.liveGForce$.subscribe((g) => {
+      this.liveGForce = g;
+      this.isSensingActive = true;
+    });
+
+    this.accelSub = this.sensorDetection.liveAcceleration$.subscribe((axes) => {
+      this.liveAxes = axes;
+    });
+
+    this.permSub = this.sensorDetection.motionPermissionState$.subscribe((perm) => {
+      this.permissionState = perm;
+    });
+
+    this.demoSub = this.telemetryService.isDemoMode$.subscribe((demo) => {
+      this.isDemoMode = demo;
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.gForceSub?.unsubscribe();
+    this.accelSub?.unsubscribe();
+    this.permSub?.unsubscribe();
+    this.demoSub?.unsubscribe();
   }
 
   onThemeChange(theme: string): void {
@@ -65,6 +102,54 @@ export class SettingsPage implements OnInit {
 
   onHapticToggle(): void {
     localStorage.setItem('bumpalert_haptic', String(this.hapticFeedback));
+  }
+
+  async requestMotionPermission(): Promise<void> {
+    const granted = await this.sensorDetection.requestMotionPermission();
+    if (granted) {
+      await this.sensorDetection.startListening();
+      this.isSensingActive = true;
+      void this.toastCtrl.create({
+        message: 'Motion sensing enabled and active',
+        duration: 2000,
+        position: 'bottom',
+      }).then((t) => t.present());
+    } else {
+      void this.toastCtrl.create({
+        message: 'Motion permission was not granted',
+        duration: 3000,
+        position: 'bottom',
+      }).then((t) => t.present());
+    }
+  }
+
+  async toggleSensing(): Promise<void> {
+    if (this.isSensingActive) {
+      await this.sensorDetection.stopListening();
+      this.isSensingActive = false;
+      void this.toastCtrl.create({
+        message: 'Motion sensing paused',
+        duration: 1500,
+        position: 'bottom',
+      }).then((t) => t.present());
+    } else {
+      await this.sensorDetection.startListening();
+      this.isSensingActive = true;
+      void this.toastCtrl.create({
+        message: 'Motion sensing active',
+        duration: 1500,
+        position: 'bottom',
+      }).then((t) => t.present());
+    }
+  }
+
+  simulateTestBump(): void {
+    this.sensorDetection.simulateSpike(4.25);
+    void this.toastCtrl.create({
+      message: 'Simulated 4.25G alarming bump captured!',
+      duration: 2000,
+      position: 'bottom',
+    }).then((t) => t.present());
   }
 
   async exportTelemetryJson(): Promise<void> {
@@ -89,17 +174,17 @@ export class SettingsPage implements OnInit {
 
   async clearAllData(): Promise<void> {
     const alert = await this.alertCtrl.create({
-      header: 'Reset All Data',
-      message: 'Clear all recorded telemetry and reset to default dataset?',
+      header: 'Clear All Telemetry',
+      message: 'Remove all recorded impact detections and start fresh with 0 reports?',
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
-          text: 'Reset',
+          text: 'Clear All',
           role: 'destructive',
           handler: () => {
-            this.telemetryService.resetToSeedData();
+            this.telemetryService.clearAll();
             void this.toastCtrl.create({
-              message: 'Telemetry data reset to default',
+              message: 'All telemetry records cleared. Ready for live ride sensing.',
               duration: 2000,
               position: 'bottom',
             }).then((t) => t.present());
@@ -108,6 +193,15 @@ export class SettingsPage implements OnInit {
       ],
     });
     await alert.present();
+  }
+
+  loadSampleRoute(): void {
+    this.telemetryService.resetToSeedData();
+    void this.toastCtrl.create({
+      message: 'Sample Greater Noida dataset loaded (38 events)',
+      duration: 2000,
+      position: 'bottom',
+    }).then((t) => t.present());
   }
 
   async openPolicy(type: 'privacy' | 'terms'): Promise<void> {

@@ -74,6 +74,26 @@
 
   </div>
 
+  <!-- iOS Motion Permission Banner: shown when DeviceMotionEvent.requestPermission() is needed -->
+  <div
+    class="motion-permission-banner"
+    slot="fixed"
+    *ngIf="motionPermissionState === 'unknown' && !isRideActive"
+  >
+    <div class="permission-banner-glass">
+      <div class="permission-icon-wrap">
+        <ion-icon name="speedometer-outline"></ion-icon>
+      </div>
+      <div class="permission-text-col">
+        <span class="permission-title">Enable Motion Sensing</span>
+        <span class="permission-desc">Allow accelerometer access to detect road bumps while you ride</span>
+      </div>
+      <button class="permission-enable-btn" (click)="enableMotionSensing()">
+        Enable
+      </button>
+    </div>
+  </div>
+
   <!-- FLOATING ACTION CONTROLS (Bottom Right) -->
   <div class="map-action-controls" slot="fixed">
     <!-- Toggle Sensing -->

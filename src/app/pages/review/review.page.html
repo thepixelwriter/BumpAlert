@@ -1,6 +1,12 @@
 <ion-header class="ion-no-border">
   <ion-toolbar class="glass-toolbar">
     <ion-title class="app-header-title">Telemetry Review</ion-title>
+    <ion-buttons slot="end">
+      <div class="header-live-tag">
+        <span class="live-pulse-dot"></span>
+        <span class="live-gforce-text">{{ liveGForce | number: '1.2-2' }} G</span>
+      </div>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -18,6 +24,23 @@
 
   <!-- Main Content Wrapper -->
   <div class="canvas-wrapper">
+
+    <!-- Demo Mode / Sample Data Notice Banner -->
+    <div class="demo-mode-banner" *ngIf="isDemoMode">
+      <div class="demo-banner-content">
+        <div class="demo-badge-col">
+          <ion-icon name="flask-outline" class="demo-icon"></ion-icon>
+        </div>
+        <div class="demo-text-col">
+          <span class="demo-title">Sample Development Dataset</span>
+          <span class="demo-desc">Viewing 38 pre-recorded Greater Noida events. Real ride detections will automatically replace this data.</span>
+        </div>
+        <div class="demo-actions-col">
+          <button class="demo-action-btn" (click)="clearAllData()">Clear</button>
+          <button class="demo-action-btn btn-test-spike" (click)="simulateTestBump()">Test Spike</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Metrics Summary Dashboard Canvas (No >= or <= symbols) -->
     <section class="summary-section">
@@ -232,15 +255,26 @@
 
     </div>
 
-    <!-- BOTTOM ACTION AREA: Reset Data and Report All to Agency at bottom of the app -->
+    <!-- BOTTOM ACTION AREA: Clear Data / Load Sample and Report All to Agency -->
     <div class="bottom-action-panel">
       <ion-button
+        *ngIf="rawReports.length > 0"
+        fill="clear"
+        class="bottom-reset-btn"
+        (click)="clearAllData()"
+      >
+        <ion-icon slot="start" name="trash-outline"></ion-icon>
+        Clear Data
+      </ion-button>
+
+      <ion-button
+        *ngIf="rawReports.length === 0"
         fill="clear"
         class="bottom-reset-btn"
         (click)="resetSeedData()"
       >
         <ion-icon slot="start" name="refresh-outline"></ion-icon>
-        Reset Sample Data
+        Load Sample Route
       </ion-button>
 
       <ion-button

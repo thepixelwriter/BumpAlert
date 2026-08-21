@@ -579,6 +579,10 @@ export class TelemetryService {
   private readonly rawReportsSubject = new BehaviorSubject<PotholeReport[]>([]);
   readonly rawReports$: Observable<PotholeReport[]> = this.rawReportsSubject.asObservable();
 
+  /** True when the app is showing the built-in seed dataset instead of real ride data. */
+  private readonly isDemoModeSubject = new BehaviorSubject<boolean>(false);
+  readonly isDemoMode$: Observable<boolean> = this.isDemoModeSubject.asObservable();
+
   /** Observable stream of geographic clusters grouped by distance < 500m. */
   readonly clusters$: Observable<TelemetryCluster[]> = this.rawReports$.pipe(
     map((reports) => this.clusterTelemetry(reports, CLUSTER_DISTANCE_THRESHOLD_METERS)),
@@ -592,23 +596,42 @@ export class TelemetryService {
   }
 
   private async initTelemetry(): Promise<void> {
-    // 1. Listen to live sensor reports from SensorDetectionService
-    this.sensorDetection.pendingReports$.subscribe((reports) => {
-      if (reports.length > 0) {
-        this.rawReportsSubject.next(this.ingestTelemetry(reports));
-      }
-    });
-
-    // 2. Load persisted reports or fallback to seed dataset
+    // 1. Load persisted reports first — prefer real data over seed
     const persisted = await this.reportStorage.loadAll();
     if (persisted.length > 0) {
+      this.isDemoModeSubject.next(false);
       this.rawReportsSubject.next(this.ingestTelemetry(persisted));
     } else {
-      // Seed with initial telemetry dataset (automatically normalized)
+      // No real data yet — load seed dataset as a demo
+      this.isDemoModeSubject.next(true);
       const seeded = this.ingestTelemetry(SEED_TELEMETRY_REPORTS);
       this.rawReportsSubject.next(seeded);
-      void this.reportStorage.replaceAll(seeded);
+      // Do NOT persist seed data so the next real detection overwrites cleanly
     }
+
+    // 2. Listen to live sensor reports — merge new detections on top of existing list
+    this.sensorDetection.pendingReports$.subscribe((liveReports) => {
+      if (liveReports.length === 0) return;
+
+      // Once real data arrives, exit demo mode permanently
+      if (this.isDemoModeSubject.value) {
+        this.isDemoModeSubject.next(false);
+        // Replace seed data with the first real detections
+        const normalized = this.ingestTelemetry(liveReports);
+        this.rawReportsSubject.next(normalized);
+        void this.reportStorage.replaceAll(normalized);
+        return;
+      }
+
+      // Merge live reports with existing, deduplicating by id
+      const existingIds = new Set(this.rawReportsSubject.value.map((r) => r.id));
+      const incoming = liveReports.filter((r) => !existingIds.has(r.id));
+      if (incoming.length === 0) return;
+
+      const merged = this.ingestTelemetry([...this.rawReportsSubject.value, ...incoming]);
+      this.rawReportsSubject.next(merged);
+      void this.reportStorage.replaceAll(merged);
+    });
   }
 
   /**
@@ -796,12 +819,23 @@ export class TelemetryService {
   }
 
   /**
-   * Resets and re-seeds the dataset.
+   * Resets and re-seeds the dataset with demo data.
    */
   resetToSeedData(): void {
+    this.isDemoModeSubject.next(true);
     const seeded = this.ingestTelemetry(SEED_TELEMETRY_REPORTS);
     this.rawReportsSubject.next(seeded);
     void this.reportStorage.replaceAll(seeded);
+  }
+
+  /**
+   * Clears all recorded telemetry and stored reports for a fresh start.
+   */
+  clearAll(): void {
+    this.sensorDetection.clearAll();
+    this.isDemoModeSubject.next(false);
+    this.rawReportsSubject.next([]);
+    void this.reportStorage.replaceAll([]);
   }
 }
 

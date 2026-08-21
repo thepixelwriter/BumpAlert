@@ -100,6 +100,50 @@
     <div class="settings-section">
       <div class="section-label">RIDE & SENSING</div>
       <div class="settings-card">
+
+        <!-- Live Sensor Monitor Row -->
+        <div class="setting-row">
+          <div class="row-label-group">
+            <span class="row-title">Motion Sensor Stream</span>
+            <span class="row-subtitle">
+              {{ isSensingActive ? 'Real-time accelerometer active' : 'Sensor idle / paused' }}
+            </span>
+          </div>
+          <div class="sensor-readout-badge" [ngClass]="isSensingActive ? 'badge-active' : 'badge-idle'">
+            <span class="readout-g">{{ liveGForce | number: '1.2-2' }} G</span>
+            <span class="readout-axes">X:{{ liveAxes.x }} Y:{{ liveAxes.y }} Z:{{ liveAxes.z }}</span>
+          </div>
+        </div>
+
+        <div class="guide-divider"></div>
+
+        <!-- Motion Permission / Enable Action -->
+        <div class="setting-row">
+          <div class="row-label-group">
+            <span class="row-title">Accelerometer Permission</span>
+            <span class="row-subtitle">Status: {{ permissionState | uppercase }}</span>
+          </div>
+          <button
+            class="setting-action-btn"
+            (click)="requestMotionPermission()"
+          >
+            {{ permissionState === 'granted' ? 'Re-check' : 'Enable Sensing' }}
+          </button>
+        </div>
+
+        <div class="guide-divider"></div>
+
+        <!-- Test Impact Detection Button -->
+        <div class="setting-clickable-row" (click)="simulateTestBump()">
+          <div class="row-label-group">
+            <span class="row-title">Simulate Test Bump (4.2G)</span>
+            <span class="row-subtitle">Trigger test alarming pothole event to verify alerts</span>
+          </div>
+          <ion-icon name="flash-outline" class="row-action-icon text-alarming"></ion-icon>
+        </div>
+
+        <div class="guide-divider"></div>
+
         <div class="setting-row">
           <div class="row-label-group">
             <span class="row-title">Keep Screen Awake</span>
@@ -154,12 +198,22 @@
 
         <div class="guide-divider"></div>
 
+        <div class="setting-clickable-row" (click)="loadSampleRoute()">
+          <div class="row-label-group">
+            <span class="row-title">Load Sample Development Route</span>
+            <span class="row-subtitle">Load 38 pre-recorded Greater Noida telemetry events</span>
+          </div>
+          <ion-icon name="refresh-outline" class="row-action-icon text-primary"></ion-icon>
+        </div>
+
+        <div class="guide-divider"></div>
+
         <div class="setting-clickable-row" (click)="clearAllData()">
           <div class="row-label-group">
-            <span class="row-title text-alarming">Reset Telemetry Dataset</span>
-            <span class="row-subtitle">Restore default Greater Noida sample route</span>
+            <span class="row-title text-alarming">Clear All Recorded Telemetry</span>
+            <span class="row-subtitle">Wipe all stored impact events and start fresh</span>
           </div>
-          <ion-icon name="refresh-outline" class="row-action-icon text-alarming"></ion-icon>
+          <ion-icon name="trash-outline" class="row-action-icon text-alarming"></ion-icon>
         </div>
       </div>
     </div>

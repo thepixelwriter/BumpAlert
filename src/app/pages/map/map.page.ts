@@ -2,7 +2,7 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/co
 import { Subject, Subscription, firstValueFrom, of, timer } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { ToastController } from '@ionic/angular';
-import { SensorDetectionService, LiveAcceleration, LiveLocation } from '../../services/sensor-detection.service';
+import { SensorDetectionService, LiveAcceleration, LiveLocation, PermissionState } from '../../services/sensor-detection.service';
 import { MapNavigationService } from '../../services/map-navigation.service';
 import { GoogleMapsLoaderService } from '../../services/google-maps-loader.service';
 import { TelemetryService, haversineDistance } from '../../services/telemetry.service';
@@ -77,6 +77,10 @@ export class MapPage implements OnInit, OnDestroy {
   private countdownSub?: Subscription;
   private fromSearchSub?: Subscription;
   private toSearchSub?: Subscription;
+  private permissionSub?: Subscription;
+
+  // Motion permission state — drives the permission prompt banner
+  motionPermissionState: PermissionState = 'unknown';
 
   constructor(
     private readonly sensorDetection: SensorDetectionService,
@@ -89,6 +93,11 @@ export class MapPage implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     await this.initMap();
+
+    // Track motion permission state for the UI banner
+    this.permissionSub = this.sensorDetection.motionPermissionState$.subscribe((state) => {
+      this.motionPermissionState = state;
+    });
 
     // 1. Live G-force stream for glassmorphism HUD meter
     this.gForceSub = this.sensorDetection.liveGForce$.subscribe((gForce) => {
@@ -145,7 +154,12 @@ export class MapPage implements OnInit, OnDestroy {
       .subscribe((results) => (this.toResults = results));
 
     await this.mapNavigation.startTracking();
-    await this.startRide();
+
+    // Only auto-start if permission is not required (Android / non-iOS)
+    if (!this.sensorDetection.needsMotionPermissionPrompt()) {
+      await this.startRide();
+    }
+    // On iOS: show permission banner — user must tap "Enable Sensing" button
   }
 
   ionViewDidEnter(): void {
@@ -171,6 +185,7 @@ export class MapPage implements OnInit, OnDestroy {
     this.countdownSub?.unsubscribe();
     this.fromSearchSub?.unsubscribe();
     this.toSearchSub?.unsubscribe();
+    this.permissionSub?.unsubscribe();
     await this.stopRide();
     await this.mapNavigation.stopTracking();
   }
@@ -245,6 +260,24 @@ export class MapPage implements OnInit, OnDestroy {
       await this.stopRide();
     } else {
       await this.startRide();
+    }
+  }
+
+  /**
+   * Called from the iOS permission banner button — must be a direct user gesture.
+   * Requests DeviceMotion permission then starts sensing immediately.
+   */
+  async enableMotionSensing(): Promise<void> {
+    const granted = await this.sensorDetection.requestMotionPermission();
+    if (granted) {
+      await this.startRide();
+    } else {
+      const toast = await this.toastCtrl.create({
+        message: 'Motion access denied. Enable it in device Settings to detect road bumps.',
+        duration: 4000,
+        position: 'bottom',
+      });
+      await toast.present();
     }
   }
 
