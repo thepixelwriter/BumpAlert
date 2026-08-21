@@ -2,7 +2,7 @@
   "name": "bumpalert",
   "version": "0.0.1",
   "author": "BumpAlert",
-  "homepage": "https://ionicframework.com/",
+  "homepage": "https://bumpalert.thepixelwriter.com/",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
