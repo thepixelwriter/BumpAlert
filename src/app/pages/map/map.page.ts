@@ -48,6 +48,7 @@ export class MapPage implements OnInit, OnDestroy {
   routingError: string | null = null;
   routeCalculated = false;
   navigating = false;
+  requiresMotionPermission = false;
   routeSummary: { distanceKm: string; durationMin: string } | null = null;
 
   mapLoadError: string | null = null;
@@ -124,6 +125,9 @@ export class MapPage implements OnInit, OnDestroy {
         accuracy: position.coords.accuracy,
       };
       this.updateCurrentLocation(position.coords.latitude, position.coords.longitude);
+      if (this.navigating) {
+        this.map?.panTo({ lat: position.coords.latitude, lng: position.coords.longitude });
+      }
       this.updateNearestHazard();
     });
 
@@ -144,7 +148,8 @@ export class MapPage implements OnInit, OnDestroy {
     await this.mapNavigation.startTracking();
 
     // Only auto-start if permission is not required (Android / non-iOS)
-    if (!this.sensorDetection.needsMotionPermissionPrompt()) {
+    this.requiresMotionPermission = this.sensorDetection.needsMotionPermissionPrompt();
+    if (!this.requiresMotionPermission) {
       await this.startRide();
     }
     // On iOS: show permission banner — user must tap "Enable Sensing" button
@@ -257,6 +262,12 @@ export class MapPage implements OnInit, OnDestroy {
     const granted = await this.sensorDetection.requestMotionPermission();
     if (granted) {
       await this.startRide();
+      const toast = await this.toastCtrl.create({
+        message: 'Motion sensing enabled. Bump detection is active.',
+        duration: 2500,
+        position: 'bottom',
+      });
+      await toast.present();
     } else {
       const toast = await this.toastCtrl.create({
         message: 'Motion access denied. Enable it in device Settings to detect road bumps.',
@@ -480,6 +491,7 @@ export class MapPage implements OnInit, OnDestroy {
         durationMin: Math.round(route.durationSeconds / 60).toString(),
       };
       this.routeCalculated = true;
+      this.searchPanelOpen = false;
     } catch (error) {
       console.warn('Routing failed', error);
       this.routingError = 'Could not calculate navigation route';
@@ -492,6 +504,11 @@ export class MapPage implements OnInit, OnDestroy {
     if (!this.routeCalculated || !this.routeSummary) return;
     this.navigating = true;
     this.searchPanelOpen = false;
+    void this.toastCtrl.create({
+      message: 'Navigation started. The map will follow your live location.',
+      duration: 2500,
+      position: 'bottom',
+    }).then((toast) => toast.present());
   }
 
   private drawRoute(

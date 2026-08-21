@@ -185,6 +185,9 @@
     font-weight: 600;
     padding: 2px 6px;
     border-radius: var(--app-element-radius);
+    background: rgba(52, 211, 153, 0.1);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.2);
 
     &.pill-alarming {
       background: var(--alert-alarming-bg);

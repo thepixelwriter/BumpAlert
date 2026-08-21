@@ -55,7 +55,8 @@
     </div>
 
     <!-- Top Right: Nearest Pothole Proximity Alert Widget -->
-    <div class="hud-widget proximity-hud-widget" *ngIf="nearestHazard">
+    <div class="hud-widget proximity-hud-widget">
+      <ng-container *ngIf="nearestHazard; else noNearbyHazard">
       <div class="hud-widget-header">
         <span class="hud-caption">PROXIMITY WARNING</span>
         <span class="proximity-tier-pill" [ngClass]="'pill-' + nearestHazard.report.severity">
@@ -74,6 +75,20 @@
           <div class="proximity-spike-val">Peak Impact: {{ nearestHazard.report.gForce | number: '1.2-2' }}G</div>
         </div>
       </div>
+      </ng-container>
+      <ng-template #noNearbyHazard>
+        <div class="hud-widget-header">
+          <span class="hud-caption">PROXIMITY WARNING</span>
+          <span class="proximity-tier-pill">CLEAR</span>
+        </div>
+        <div class="proximity-body-row">
+          <div class="proximity-icon-wrap"><ion-icon name="shield-checkmark-outline"></ion-icon></div>
+          <div class="proximity-info-col">
+            <div class="proximity-distance">No nearby detections</div>
+            <div class="proximity-spike-val">Live hazards appear here</div>
+          </div>
+        </div>
+      </ng-template>
     </div>
 
   </div>
@@ -82,7 +97,7 @@
   <div
     class="motion-permission-banner"
     slot="fixed"
-    *ngIf="motionPermissionState === 'unknown' && !isRideActive"
+    *ngIf="requiresMotionPermission && (motionPermissionState === 'unknown' || motionPermissionState === 'prompt') && !isRideActive"
   >
     <div class="permission-banner-glass">
       <div class="permission-icon-wrap">
@@ -187,7 +202,7 @@
         <span class="route-meta-separator">&middot;</span>
         <span class="route-dist-text">{{ routeSummary.distanceKm }} km</span>
       </div>
-      <button class="exit-nav-btn" (click)="startNavigation()">Start</button>
+      <button class="exit-nav-btn" (click)="startNavigation()">Start navigation</button>
     </div>
   </div>
 
