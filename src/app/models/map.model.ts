@@ -3,6 +3,7 @@ export interface GeocodeResult {
   label: string;
   latitude: number;
   longitude: number;
+  placeId?: string;
 }
 
 /** A point along a computed driving route. */

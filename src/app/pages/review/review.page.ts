@@ -28,13 +28,12 @@ export class ReviewPage implements OnInit, OnDestroy {
 
   // Live telemetry streaming from sensors
   liveGForce = 0;
-  isDemoMode = false;
+  hasLiveTelemetry = false;
   isSharing = false;
 
   private clusterSub?: Subscription;
   private rawReportsSub?: Subscription;
   private gForceSub?: Subscription;
-  private demoSub?: Subscription;
 
   constructor(
     private readonly telemetryService: TelemetryService,
@@ -60,18 +59,15 @@ export class ReviewPage implements OnInit, OnDestroy {
 
     this.gForceSub = this.sensorDetection.liveGForce$.subscribe((g) => {
       this.liveGForce = g;
+      this.hasLiveTelemetry = true;
     });
 
-    this.demoSub = this.telemetryService.isDemoMode$.subscribe((demo) => {
-      this.isDemoMode = demo;
-    });
   }
 
   ngOnDestroy(): void {
     this.clusterSub?.unsubscribe();
     this.rawReportsSub?.unsubscribe();
     this.gForceSub?.unsubscribe();
-    this.demoSub?.unsubscribe();
   }
 
   get unsubmittedCount(): number {
@@ -175,16 +171,6 @@ export class ReviewPage implements OnInit, OnDestroy {
     await alert.present();
   }
 
-  resetSeedData(): void {
-    this.telemetryService.resetToSeedData();
-    this.expandedClusterIds.clear();
-    void this.toastCtrl.create({
-      message: 'Sample Greater Noida dataset loaded (38 events)',
-      duration: 2000,
-      position: 'bottom',
-    }).then((t) => t.present());
-  }
-
   async clearAllData(): Promise<void> {
     const alert = await this.alertCtrl.create({
       header: 'Clear All Telemetry',
@@ -207,15 +193,6 @@ export class ReviewPage implements OnInit, OnDestroy {
       ],
     });
     await alert.present();
-  }
-
-  simulateTestBump(): void {
-    this.sensorDetection.simulateSpike(4.25);
-    void this.toastCtrl.create({
-      message: 'Simulated 4.25G alarming bump captured!',
-      duration: 2000,
-      position: 'bottom',
-    }).then((t) => t.present());
   }
 
   getDominantSeverityLabel(severity: HazardSeverity): string {

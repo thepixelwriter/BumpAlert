@@ -45,7 +45,7 @@ export class MapNavigationService implements OnDestroy {
     return Geolocation.getCurrentPosition({ enableHighAccuracy: true });
   }
 
-  /** Looks up place suggestions for a free-text "from"/"to" query via Google Geocoding. */
+  /** Looks up destination suggestions with Google Places, falling back to Geocoding if unavailable. */
   async geocodeAddress(query: string): Promise<GeocodeResult[]> {
     const trimmed = query.trim();
     if (trimmed.length < 3) {
@@ -53,6 +53,18 @@ export class MapNavigationService implements OnDestroy {
     }
 
     const maps = await this.googleMapsLoader.load();
+    if (maps.places?.AutocompleteService) {
+      const autocomplete = new maps.places.AutocompleteService();
+      const predictions = await new Promise<google.maps.places.AutocompletePrediction[]>((resolve, reject) => {
+        autocomplete.getPlacePredictions({ input: trimmed, types: ['geocode'] }, (results, status) => {
+          if (status === maps.places.PlacesServiceStatus.ZERO_RESULTS) return resolve([]);
+          if (status !== maps.places.PlacesServiceStatus.OK || !results) return reject(new Error(`Place search failed with status ${status}`));
+          resolve(results);
+        });
+      });
+      return Promise.all(predictions.slice(0, 5).map((prediction) => this.resolvePlace(prediction.place_id, prediction.description)));
+    }
+
     const geocoder = new maps.Geocoder();
 
     return new Promise<GeocodeResult[]>((resolve, reject) => {
@@ -73,6 +85,23 @@ export class MapNavigationService implements OnDestroy {
             longitude: r.geometry.location.lng(),
           })),
         );
+      });
+    });
+  }
+
+  private async resolvePlace(placeId: string, label: string): Promise<GeocodeResult> {
+    const maps = await this.googleMapsLoader.load();
+    const geocoder = new maps.Geocoder();
+    return new Promise<GeocodeResult>((resolve, reject) => {
+      geocoder.geocode({ placeId }, (results, status) => {
+        const result = results?.[0];
+        if (status !== 'OK' || !result) return reject(new Error(`Place details failed with status ${status}`));
+        resolve({
+          label,
+          latitude: result.geometry.location.lat(),
+          longitude: result.geometry.location.lng(),
+          placeId,
+        });
       });
     });
   }

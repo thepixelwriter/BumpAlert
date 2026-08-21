@@ -4,7 +4,7 @@
     <ion-buttons slot="end">
       <div class="header-live-tag">
         <span class="live-pulse-dot"></span>
-        <span class="live-gforce-text">{{ liveGForce | number: '1.2-2' }} G</span>
+        <span class="live-gforce-text">{{ hasLiveTelemetry ? (liveGForce | number: '1.2-2') + ' G' : 'Waiting for telemetry' }}</span>
       </div>
     </ion-buttons>
   </ion-toolbar>
@@ -24,23 +24,6 @@
 
   <!-- Main Content Wrapper -->
   <div class="canvas-wrapper">
-
-    <!-- Demo Mode / Sample Data Notice Banner -->
-    <div class="demo-mode-banner" *ngIf="isDemoMode">
-      <div class="demo-banner-content">
-        <div class="demo-badge-col">
-          <ion-icon name="flask-outline" class="demo-icon"></ion-icon>
-        </div>
-        <div class="demo-text-col">
-          <span class="demo-title">Sample Development Dataset</span>
-          <span class="demo-desc">Viewing 38 pre-recorded Greater Noida events. Real ride detections will automatically replace this data.</span>
-        </div>
-        <div class="demo-actions-col">
-          <button class="demo-action-btn" (click)="clearAllData()">Clear</button>
-          <button class="demo-action-btn btn-test-spike" (click)="simulateTestBump()">Test Spike</button>
-        </div>
-      </div>
-    </div>
 
     <!-- Metrics Summary Dashboard Canvas (No >= or <= symbols) -->
     <section class="summary-section">
@@ -109,11 +92,8 @@
       <div class="empty-icon-ring">
         <ion-icon name="shield-checkmark-outline"></ion-icon>
       </div>
-      <h3 class="empty-title">No Telemetry Recorded</h3>
-      <p class="empty-desc">Pull down to refresh, record bumps in Map mode, or load sample telemetry.</p>
-      <ion-button fill="outline" class="soft-action-btn" (click)="resetSeedData()">
-        Load Sample Telemetry
-      </ion-button>
+      <h3 class="empty-title">No detections yet</h3>
+      <p class="empty-desc">Start ride sensing to monitor live telemetry. Confirmed impacts will appear here during this session.</p>
     </div>
 
     <!-- Grouped Clusters Canvas (Collapsed by default, No Left Border) -->
@@ -255,7 +235,7 @@
 
     </div>
 
-    <!-- BOTTOM ACTION AREA: Clear Data / Load Sample and Report All to Agency -->
+    <!-- BOTTOM ACTION AREA: Clear current session and report current detections -->
     <div class="bottom-action-panel">
       <ion-button
         *ngIf="rawReports.length > 0"
@@ -265,16 +245,6 @@
       >
         <ion-icon slot="start" name="trash-outline"></ion-icon>
         Clear Data
-      </ion-button>
-
-      <ion-button
-        *ngIf="rawReports.length === 0"
-        fill="clear"
-        class="bottom-reset-btn"
-        (click)="resetSeedData()"
-      >
-        <ion-icon slot="start" name="refresh-outline"></ion-icon>
-        Load Sample Route
       </ion-button>
 
       <ion-button

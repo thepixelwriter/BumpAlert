@@ -27,7 +27,6 @@ export class SettingsPage implements OnInit, OnDestroy {
   liveAxes: LiveAcceleration = { x: 0, y: 0, z: 0 };
   permissionState: PermissionState = 'unknown';
   isSensingActive = false;
-  isDemoMode = false;
 
   // Civic Agency Integration
   autoSubmitConfirmed = false;
@@ -40,7 +39,6 @@ export class SettingsPage implements OnInit, OnDestroy {
   private gForceSub?: Subscription;
   private accelSub?: Subscription;
   private permSub?: Subscription;
-  private demoSub?: Subscription;
 
   constructor(
     private readonly telemetryService: TelemetryService,
@@ -73,16 +71,12 @@ export class SettingsPage implements OnInit, OnDestroy {
       this.permissionState = perm;
     });
 
-    this.demoSub = this.telemetryService.isDemoMode$.subscribe((demo) => {
-      this.isDemoMode = demo;
-    });
   }
 
   ngOnDestroy(): void {
     this.gForceSub?.unsubscribe();
     this.accelSub?.unsubscribe();
     this.permSub?.unsubscribe();
-    this.demoSub?.unsubscribe();
   }
 
   onThemeChange(theme: string): void {
@@ -143,15 +137,6 @@ export class SettingsPage implements OnInit, OnDestroy {
     }
   }
 
-  simulateTestBump(): void {
-    this.sensorDetection.simulateSpike(4.25);
-    void this.toastCtrl.create({
-      message: 'Simulated 4.25G alarming bump captured!',
-      duration: 2000,
-      position: 'bottom',
-    }).then((t) => t.present());
-  }
-
   async exportTelemetryJson(): Promise<void> {
     this.telemetryService.rawReports$.subscribe((reports) => {
       const payload = JSON.stringify(reports, null, 2);
@@ -193,15 +178,6 @@ export class SettingsPage implements OnInit, OnDestroy {
       ],
     });
     await alert.present();
-  }
-
-  loadSampleRoute(): void {
-    this.telemetryService.resetToSeedData();
-    void this.toastCtrl.create({
-      message: 'Sample Greater Noida dataset loaded (38 events)',
-      duration: 2000,
-      position: 'bottom',
-    }).then((t) => t.present());
   }
 
   async openPolicy(type: 'privacy' | 'terms'): Promise<void> {

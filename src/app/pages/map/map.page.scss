@@ -51,7 +51,7 @@
 /* 1. Integrated Glassmorphic Floating HUD Layer */
 .map-floating-hud {
   position: absolute;
-  top: calc(16px + env(safe-area-inset-top));
+  top: calc(80px + env(safe-area-inset-top));
   left: 16px;
   right: 16px;
   display: flex;
@@ -301,7 +301,7 @@
 /* 3. Search & Route Planner Overlay */
 .search-panel-overlay {
   position: absolute;
-  bottom: calc(84px + env(safe-area-inset-bottom));
+  top: calc(12px + env(safe-area-inset-top));
   left: 16px;
   right: 76px;
   max-width: 420px;

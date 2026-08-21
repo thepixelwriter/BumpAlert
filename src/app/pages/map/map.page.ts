@@ -1,5 +1,5 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { Subject, Subscription, firstValueFrom, of, timer } from 'rxjs';
+import { Subject, Subscription, firstValueFrom, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { ToastController } from '@ionic/angular';
 import { SensorDetectionService, LiveAcceleration, LiveLocation, PermissionState } from '../../services/sensor-detection.service';
@@ -10,8 +10,6 @@ import { WakeLockService } from '../../services/wake-lock.service';
 import { PotholeReport, HazardSeverity } from '../../models/pothole-report.model';
 import { GeocodeResult } from '../../models/map.model';
 
-const ALERT_DURATION_MS = 5000;
-const ALERT_TICK_MS = 100;
 const DEFAULT_CENTER = { latitude: 28.4328, longitude: 77.5035 };
 const DEFAULT_ZOOM = 16;
 const SEARCH_DEBOUNCE_MS = 400;
@@ -32,6 +30,7 @@ export class MapPage implements OnInit, OnDestroy {
 
   // Real-time sensor metrics
   currentGForce = 0;
+  hasLiveTelemetry = false;
   liveAcceleration: LiveAcceleration = { x: 0, y: 0, z: 0 };
   liveLocation: LiveLocation | null = null;
   isRideActive = false;
@@ -39,34 +38,26 @@ export class MapPage implements OnInit, OnDestroy {
   // Nearest Pothole Alert HUD
   nearestHazard: NearestHazardInfo | null = null;
 
-  // Active bump detection alert modal/toast
-  activeAlert: PotholeReport | null = null;
-  alertProgress = 0;
-
   // Navigation and Route Planner
-  searchPanelOpen = false;
-  fromText = '';
+  searchPanelOpen = true;
   toText = '';
-  fromResults: GeocodeResult[] = [];
   toResults: GeocodeResult[] = [];
-  selectedFrom: GeocodeResult | null = null;
   selectedTo: GeocodeResult | null = null;
   routingInProgress = false;
   routingError: string | null = null;
+  routeCalculated = false;
   navigating = false;
   routeSummary: { distanceKm: string; durationMin: string } | null = null;
 
   mapLoadError: string | null = null;
   private map?: google.maps.Map;
   private currentLocationMarker?: google.maps.Marker;
-  private originMarker?: google.maps.Marker;
   private destinationMarker?: google.maps.Marker;
   private routeLine?: google.maps.Polyline;
   private lastKnownPosition: { latitude: number; longitude: number } | null = null;
   private readonly hazardMarkers = new Map<string, google.maps.Marker>();
   private allReports: PotholeReport[] = [];
 
-  private readonly fromQuery$ = new Subject<string>();
   private readonly toQuery$ = new Subject<string>();
 
   private gForceSub?: Subscription;
@@ -74,8 +65,6 @@ export class MapPage implements OnInit, OnDestroy {
   private detectSub?: Subscription;
   private reportsSub?: Subscription;
   private positionSub?: Subscription;
-  private countdownSub?: Subscription;
-  private fromSearchSub?: Subscription;
   private toSearchSub?: Subscription;
   private permissionSub?: Subscription;
 
@@ -102,6 +91,7 @@ export class MapPage implements OnInit, OnDestroy {
     // 1. Live G-force stream for glassmorphism HUD meter
     this.gForceSub = this.sensorDetection.liveGForce$.subscribe((gForce) => {
       this.currentGForce = gForce;
+      this.hasLiveTelemetry = true;
     });
 
     this.accelSub = this.sensorDetection.liveAcceleration$.subscribe((axes) => {
@@ -110,7 +100,7 @@ export class MapPage implements OnInit, OnDestroy {
 
     // 2. Real-time bump detection notifications
     this.detectSub = this.sensorDetection.potholeDetected$.subscribe((report) => {
-      this.showAlert(report);
+      void this.showDetectionNotification(report);
     });
 
     // 3. Telemetry reports subscription to render map markers and nearest hazard calculation
@@ -136,15 +126,7 @@ export class MapPage implements OnInit, OnDestroy {
       this.updateNearestHazard();
     });
 
-    // 5. Search autocomplete streams
-    this.fromSearchSub = this.fromQuery$
-      .pipe(
-        debounceTime(SEARCH_DEBOUNCE_MS),
-        distinctUntilChanged(),
-        switchMap((query) => this.safeGeocode(query)),
-      )
-      .subscribe((results) => (this.fromResults = results));
-
+    // 5. Destination autocomplete stream
     this.toSearchSub = this.toQuery$
       .pipe(
         debounceTime(SEARCH_DEBOUNCE_MS),
@@ -182,8 +164,6 @@ export class MapPage implements OnInit, OnDestroy {
     this.detectSub?.unsubscribe();
     this.reportsSub?.unsubscribe();
     this.positionSub?.unsubscribe();
-    this.countdownSub?.unsubscribe();
-    this.fromSearchSub?.unsubscribe();
     this.toSearchSub?.unsubscribe();
     this.permissionSub?.unsubscribe();
     await this.stopRide();
@@ -338,14 +318,14 @@ export class MapPage implements OnInit, OnDestroy {
     for (const report of reports) {
       if (this.hazardMarkers.has(report.id)) continue;
 
-      let color = '#38bdf8'; // Moderate
-      let scale = 5;
+      let color = '#38bdf8';
+      let scale = 10;
       if (report.severity === 'alarming') {
-        color = '#f87171'; // Muted Rose Alarming
-        scale = 7;
+        color = '#f87171';
+        scale = 14;
       } else if (report.severity === 'severe') {
-        color = '#fb923c'; // Warm Terracotta Severe
-        scale = 6;
+        color = '#fb923c';
+        scale = 12;
       }
 
       const marker = new google.maps.Marker({
@@ -356,8 +336,8 @@ export class MapPage implements OnInit, OnDestroy {
           scale,
           fillColor: color,
           fillOpacity: 0.95,
-          strokeColor: '#0e131b',
-          strokeWeight: 1.5,
+          strokeColor: '#ffffff',
+          strokeWeight: 3,
         },
         title: `${report.severity.toUpperCase()} Bump: ${report.gForce.toFixed(2)}G`,
       });
@@ -402,37 +382,14 @@ export class MapPage implements OnInit, OnDestroy {
     }
   }
 
-  // Real-time Detection Alert Card
-  private showAlert(report: PotholeReport): void {
-    this.countdownSub?.unsubscribe();
-    this.activeAlert = report;
-    this.alertProgress = 0;
-
-    const ticks = ALERT_DURATION_MS / ALERT_TICK_MS;
-    this.countdownSub = timer(0, ALERT_TICK_MS).subscribe((tick) => {
-      this.alertProgress = Math.min(tick / ticks, 1);
-      if (tick >= ticks) {
-        this.closeAlert();
-      }
+  private async showDetectionNotification(report: PotholeReport): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message: `Potential ${report.severity} bump detected and saved to this session`,
+      duration: 3000,
+      position: 'top',
+      color: report.severity === 'alarming' ? 'danger' : 'warning',
     });
-  }
-
-  quickReport(): void {
-    if (!this.activeAlert) return;
-    this.telemetryService.confirmReport(this.activeAlert.id);
-    this.closeAlert();
-  }
-
-  dismiss(): void {
-    if (!this.activeAlert) return;
-    this.telemetryService.dismissReport(this.activeAlert.id);
-    this.closeAlert();
-  }
-
-  private closeAlert(): void {
-    this.countdownSub?.unsubscribe();
-    this.activeAlert = null;
-    this.alertProgress = 0;
+    await toast.present();
   }
 
   // Floating controls: Locate Me & Recenter
@@ -455,43 +412,54 @@ export class MapPage implements OnInit, OnDestroy {
     this.searchPanelOpen = !this.searchPanelOpen;
   }
 
-  onFromInput(value: string): void {
-    this.fromText = value;
-    this.selectedFrom = null;
-    this.fromQuery$.next(value);
-  }
-
   onToInput(value: string): void {
     this.toText = value;
     this.selectedTo = null;
     this.toQuery$.next(value);
   }
 
-  selectFrom(result: GeocodeResult): void {
-    this.selectedFrom = result;
-    this.fromText = result.label;
-    this.fromResults = [];
-  }
-
   selectTo(result: GeocodeResult): void {
     this.selectedTo = result;
     this.toText = result.label;
     this.toResults = [];
+    this.routeCalculated = false;
+    this.routingError = null;
+    this.destinationMarker?.setMap(null);
+    this.destinationMarker = new google.maps.Marker({
+      position: { lat: result.latitude, lng: result.longitude }, map: this.map, title: result.label,
+      label: { text: 'D', color: '#ffffff', fontWeight: '700' },
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: '#0284c7', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 3 },
+      zIndex: 120,
+    });
+    this.map?.panTo({ lat: result.latitude, lng: result.longitude });
+    this.map?.setZoom(15);
   }
 
-  async startNavigation(): Promise<void> {
+  async calculateRoute(): Promise<void> {
     this.routingError = null;
     if (!this.selectedTo && !this.toText.trim()) {
       this.routingError = 'Enter a valid destination';
       return;
     }
 
-    const origin = this.selectedFrom || this.lastKnownPosition || DEFAULT_CENTER;
     const dest = this.selectedTo || (await this.safeGeocode(this.toText))[0];
 
     if (!dest) {
-      this.routingError = 'Could not resolve destination coordinates';
+      this.routingError = 'Choose a destination from the search suggestions.';
       return;
+    }
+
+    let origin = this.lastKnownPosition;
+    if (!origin) {
+      try {
+        const position = await this.mapNavigation.getCurrentPosition();
+        origin = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+        this.lastKnownPosition = origin;
+        this.updateCurrentLocation(origin.latitude, origin.longitude);
+      } catch {
+        this.routingError = 'Current location is required for directions. Enable location access and try again.';
+        return;
+      }
     }
 
     this.routingInProgress = true;
@@ -502,14 +470,19 @@ export class MapPage implements OnInit, OnDestroy {
         distanceKm: (route.distanceMeters / 1000).toFixed(1),
         durationMin: Math.round(route.durationSeconds / 60).toString(),
       };
-      this.navigating = true;
-      this.searchPanelOpen = false;
+      this.routeCalculated = true;
     } catch (error) {
       console.warn('Routing failed', error);
       this.routingError = 'Could not calculate navigation route';
     } finally {
       this.routingInProgress = false;
     }
+  }
+
+  startNavigation(): void {
+    if (!this.routeCalculated || !this.routeSummary) return;
+    this.navigating = true;
+    this.searchPanelOpen = false;
   }
 
   private drawRoute(
@@ -528,17 +501,8 @@ export class MapPage implements OnInit, OnDestroy {
       strokeWeight: 6,
     });
 
-    this.originMarker = new google.maps.Marker({
-      position: { lat: origin.latitude, lng: origin.longitude },
-      map: this.map,
-      title: 'Start',
-    });
-
-    this.destinationMarker = new google.maps.Marker({
-      position: { lat: destination.latitude, lng: destination.longitude },
-      map: this.map,
-      title: 'Destination',
-    });
+    this.destinationMarker?.setMap(null);
+    this.destinationMarker = new google.maps.Marker({ position: { lat: destination.latitude, lng: destination.longitude }, map: this.map, title: 'Destination' });
 
     const bounds = new google.maps.LatLngBounds();
     path.forEach((p) => bounds.extend(p));
@@ -549,18 +513,15 @@ export class MapPage implements OnInit, OnDestroy {
     this.clearRoute();
     this.navigating = false;
     this.routeSummary = null;
-    this.selectedFrom = null;
     this.selectedTo = null;
-    this.fromText = '';
     this.toText = '';
+    this.routeCalculated = false;
   }
 
   private clearRoute(): void {
     this.routeLine?.setMap(null);
-    this.originMarker?.setMap(null);
     this.destinationMarker?.setMap(null);
     this.routeLine = undefined;
-    this.originMarker = undefined;
     this.destinationMarker = undefined;
   }
 

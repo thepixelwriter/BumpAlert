@@ -1,16 +1,11 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
 import { Motion, type AccelListenerEvent } from '@capacitor/motion';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { PotholeReport, HazardSeverity } from '../models/pothole-report.model';
-import { ReportStorageService } from './report-storage.service';
 import { BackgroundBumpDetection } from './background-bump-detection';
-
-/** Batches rapid successive queue updates (e.g. bulk markSubmitted) into a single IndexedDB write. */
-const PERSIST_DEBOUNCE_MS = 400;
 
 /** Standard gravity, used as the baseline to subtract from raw accelerometer readings. */
 const GRAVITY_G = 9.80665;
@@ -77,10 +72,7 @@ export class SensorDetectionService implements OnDestroy {
 
   private listening = false;
 
-  constructor(private readonly reportStorage: ReportStorageService) {
-    void this.restorePersistedReports();
-    this.pendingReports$.pipe(debounceTime(PERSIST_DEBOUNCE_MS)).subscribe((reports) => this.persistReports(reports));
-
+  constructor() {
     // Bumps captured natively while minimized only surface once the app is foregrounded again.
     void App.addListener('resume', () => void this.drainNativeBackgroundReports());
   }
@@ -111,24 +103,6 @@ export class SensorDetectionService implements OnDestroy {
     } catch (error) {
       console.warn('BumpAlert: unable to drain background-detected reports', error);
     }
-  }
-
-  /** Auto-resume: reloads any reports left over from a killed/frozen tab before the user notices. */
-  private async restorePersistedReports(): Promise<void> {
-    try {
-      const stored = await this.reportStorage.loadAll();
-      if (stored.length) {
-        this.pendingReportsSubject.next(stored);
-      }
-    } catch (error) {
-      console.warn('BumpAlert: unable to restore persisted reports', error);
-    }
-  }
-
-  private persistReports(reports: PotholeReport[]): void {
-    void this.reportStorage.replaceAll(reports).catch((error) => {
-      console.warn('BumpAlert: unable to persist pending reports', error);
-    });
   }
 
   async startListening(): Promise<void> {
@@ -314,31 +288,22 @@ export class SensorDetectionService implements OnDestroy {
     return null;
   }
 
-  /** Simulates a bump spike detection for verification / testing. */
-  simulateSpike(gForce = 4.2): void {
-    const severity = this.classifyGForce(gForce) ?? 'alarming';
-    this.liveGForceSubject.next(gForce);
-    void this.captureDetection(gForce, severity);
-  }
-
   private async captureDetection(gForce: number, severity: HazardSeverity): Promise<void> {
     const timestamp = Date.now();
-    let latitude = 28.4328;
-    let longitude = 77.5035;
-
     const liveLoc = this.liveLocationSubject.value;
-    if (liveLoc) {
-      latitude = liveLoc.latitude;
-      longitude = liveLoc.longitude;
-    }
+    let latitude = liveLoc?.latitude;
+    let longitude = liveLoc?.longitude;
 
     try {
       const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 3500 });
       latitude = position.coords.latitude;
       longitude = position.coords.longitude;
     } catch {
-      // Use live location or fallback
+      // A live GPS fix, if available, remains the source of truth.
     }
+
+    // Do not create a geotagged road-hazard record from fabricated coordinates.
+    if (latitude === undefined || longitude === undefined) return;
 
     const report: PotholeReport = {
       id: `${timestamp}-${Math.round(gForce * 1000)}`,
