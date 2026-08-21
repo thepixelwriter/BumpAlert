@@ -3,9 +3,11 @@ import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { Motion, type AccelListenerEvent } from '@capacitor/motion';
 import { Geolocation } from '@capacitor/geolocation';
-import type { PluginListenerHandle } from '@capacitor/core';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
+import { App } from '@capacitor/app';
 import { PotholeReport, HazardSeverity } from '../models/pothole-report.model';
 import { ReportStorageService } from './report-storage.service';
+import { BackgroundBumpDetection } from './background-bump-detection';
 
 /** Batches rapid successive queue updates (e.g. bulk markSubmitted) into a single IndexedDB write. */
 const PERSIST_DEBOUNCE_MS = 400;
@@ -75,6 +77,37 @@ export class SensorDetectionService implements OnDestroy {
   constructor(private readonly reportStorage: ReportStorageService) {
     void this.restorePersistedReports();
     this.pendingReports$.pipe(debounceTime(PERSIST_DEBOUNCE_MS)).subscribe((reports) => this.persistReports(reports));
+
+    // Bumps captured natively while minimized only surface once the app is foregrounded again.
+    void App.addListener('resume', () => void this.drainNativeBackgroundReports());
+  }
+
+  /** Only Android can keep sampling the accelerometer/GPS while minimized - see BumpDetectionService.java. */
+  private isBackgroundDetectionSupported(): boolean {
+    return Capacitor.getPlatform() === 'android';
+  }
+
+  private async drainNativeBackgroundReports(): Promise<void> {
+    if (!this.isBackgroundDetectionSupported()) {
+      return;
+    }
+    try {
+      const { reports } = await BackgroundBumpDetection.drainReports();
+      if (!reports.length) {
+        return;
+      }
+      const existingIds = new Set(this.pendingReportsSubject.value.map((r) => r.id));
+      const newReports: PotholeReport[] = reports
+        .filter((r) => !existingIds.has(r.id))
+        .map((r) => ({ ...r, status: 'pending' as const }));
+      if (!newReports.length) {
+        return;
+      }
+      this.pendingReportsSubject.next([...this.pendingReportsSubject.value, ...newReports]);
+      this.potholeDetectedSubject.next(newReports[newReports.length - 1]);
+    } catch (error) {
+      console.warn('BumpAlert: unable to drain background-detected reports', error);
+    }
   }
 
   /** Auto-resume: reloads any reports left over from a killed/frozen tab before the user notices. */
@@ -103,6 +136,14 @@ export class SensorDetectionService implements OnDestroy {
     this.motionListener = await Motion.addListener('accel', (event) => this.handleAccelEvent(event));
     if (!this.needsMotionPermissionPrompt()) {
       this.motionPermissionSubject.next('not-required');
+    }
+
+    if (this.isBackgroundDetectionSupported()) {
+      try {
+        await BackgroundBumpDetection.start();
+      } catch (error) {
+        console.warn('BumpAlert: unable to start background bump detection', error);
+      }
     }
   }
 
@@ -133,6 +174,14 @@ export class SensorDetectionService implements OnDestroy {
     this.listening = false;
     await this.motionListener?.remove();
     this.motionListener = null;
+
+    if (this.isBackgroundDetectionSupported()) {
+      try {
+        await BackgroundBumpDetection.stop();
+      } catch (error) {
+        console.warn('BumpAlert: unable to stop background bump detection', error);
+      }
+    }
   }
 
   /** Starts a continuous GPS watch purely for the live readout - separate from per-detection capture. */
