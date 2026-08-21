@@ -10,8 +10,94 @@
     </div>
   </div>
 
-  <!-- FLOATING HUD LAYER: Real-time Telemetry & Proximity Metrics -->
-  <div class="map-floating-hud" slot="fixed">
+  <!-- Turn-by-turn view shown during an active trip -->
+  <div class="active-navigation-ui" slot="fixed" *ngIf="navigating && routeSummary">
+    <div class="next-turn-card">
+      <ion-icon class="maneuver-icon" name="arrow-up-outline"></ion-icon>
+      <div>
+        <span>Continue on route</span>
+        <strong>Head toward {{ selectedTo?.label || 'your destination' }}</strong>
+      </div>
+      <button aria-label="Navigation options"><ion-icon name="sparkles"></ion-icon></button>
+    </div>
+    <div class="then-turn-card"><span>Then</span><ion-icon name="return-down-forward-outline"></ion-icon></div>
+
+    <div class="navigation-side-controls">
+      <button (click)="locateMe()" aria-label="Recenter map"><ion-icon name="compass-outline"></ion-icon></button>
+      <button (click)="toggleSearchPanel()" aria-label="Search along route"><ion-icon name="search-outline"></ion-icon></button>
+      <button (click)="toggleNavigationAudio()" [attr.aria-label]="navigationMuted ? 'Unmute navigation' : 'Mute navigation'">
+        <ion-icon [name]="navigationMuted ? 'volume-mute-outline' : 'volume-high-outline'"></ion-icon>
+      </button>
+    </div>
+
+    <div class="navigation-speed-chip"><strong>{{ currentSpeedKph === null ? '--' : currentSpeedKph }}</strong><span>km/h</span></div>
+    <button class="report-road-button" (click)="explainAutomaticReporting()"><ion-icon name="warning-outline"></ion-icon> Report</button>
+
+    <div class="active-trip-tray">
+      <div class="trip-time"><strong>{{ routeSummary.durationMin }} min</strong><span>{{ routeSummary.distanceKm }} km · On route</span></div>
+      <button class="route-options" aria-label="Route options"><ion-icon name="git-branch-outline"></ion-icon></button>
+      <button class="exit-trip" (click)="stopNavigation()">Exit</button>
+    </div>
+  </div>
+
+  <!-- Full-width Google Maps-style destination search -->
+  <div class="navigation-shell" slot="fixed" *ngIf="!navigating">
+    <div class="destination-search-card" [class.is-open]="searchPanelOpen">
+      <button
+        class="search-icon-button"
+        (click)="toggleSearchPanel()"
+        [attr.aria-label]="searchPanelOpen ? 'Close destination search' : 'Open destination search'"
+      >
+        <ion-icon [name]="searchPanelOpen ? 'arrow-back-outline' : 'search-outline'"></ion-icon>
+      </button>
+      <div class="destination-input-wrap">
+        <label for="destination-search">Where to?</label>
+        <input
+          id="destination-search"
+          type="text"
+          placeholder="Search destination, address or landmark"
+          [value]="toText"
+          (focus)="searchPanelOpen = true"
+          (input)="onToInput($any($event.target).value)"
+        />
+      </div>
+      <button class="locate-inline-button" (click)="locateMe()" aria-label="Center on current location">
+        <ion-icon name="locate-outline"></ion-icon>
+      </button>
+
+      <div *ngIf="searchPanelOpen" class="search-results-panel">
+        <div *ngIf="toResults.length > 0" class="suggestions-drop">
+          <button *ngFor="let result of toResults" class="suggestion-row" (click)="selectTo(result)">
+            <ion-icon name="location-outline"></ion-icon>
+            <span>{{ result.label }}</span>
+          </button>
+        </div>
+        <p class="search-message" *ngIf="searchMessage">{{ searchMessage }}</p>
+        <p class="routing-msg-error" *ngIf="routingError">{{ routingError }}</p>
+        <button
+          class="directions-action-btn"
+          [disabled]="(!toText && !selectedTo) || routingInProgress"
+          (click)="calculateRoute()"
+        >
+          <ion-spinner name="crescent" *ngIf="routingInProgress"></ion-spinner>
+          <ion-icon *ngIf="!routingInProgress" name="navigate-outline"></ion-icon>
+          <span>{{ routingInProgress ? 'Finding route…' : 'Get directions' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="start-navigation-bar" *ngIf="routeCalculated && routeSummary && !navigating">
+      <div class="route-info-group">
+        <strong>{{ routeSummary.durationMin }} min</strong>
+        <span>{{ routeSummary.distanceKm }} km</span>
+      </div>
+      <button (click)="startNavigation()"><ion-icon name="navigate"></ion-icon> Start navigation</button>
+    </div>
+
+  </div>
+
+  <!-- FLOATING HUD LAYER: real-time telemetry and proximity have matching dimensions -->
+  <div class="map-floating-hud" slot="fixed" *ngIf="!navigating">
 
     <!-- Top Left: Live G-Force Meter Widget -->
     <div class="hud-widget gforce-hud-widget">
@@ -114,7 +200,7 @@
   </div>
 
   <!-- FLOATING ACTION CONTROLS (Bottom Right) -->
-  <div class="map-action-controls" slot="fixed">
+  <div class="map-action-controls" slot="fixed" *ngIf="!navigating">
     <!-- Toggle Sensing -->
     <button
       class="glass-circle-btn"
@@ -130,80 +216,6 @@
       <ion-icon name="locate-outline"></ion-icon>
     </button>
 
-    <!-- Route Navigation Toggle -->
-    <button
-      class="glass-circle-btn btn-primary-accent"
-      [class.btn-active]="searchPanelOpen"
-      (click)="toggleSearchPanel()"
-      title="Navigation Route Planner"
-    >
-      <ion-icon [name]="searchPanelOpen ? 'close-outline' : 'navigate-outline'"></ion-icon>
-    </button>
-  </div>
-
-  <!-- Route Search / Navigation Panel -->
-  <div class="search-panel-overlay" slot="fixed" *ngIf="searchPanelOpen">
-    <div class="search-glass-card">
-      <div class="search-field-group">
-        <div class="input-row">
-          <ion-icon name="location-outline" class="input-icon-dest"></ion-icon>
-          <input
-            type="text"
-            class="clean-search-input"
-            placeholder="Search destination, address or landmark"
-            [value]="toText"
-            (input)="onToInput($any($event.target).value)"
-          />
-        </div>
-
-        <div *ngIf="toResults.length > 0" class="suggestions-drop">
-          <div
-            *ngFor="let result of toResults"
-            class="suggestion-row"
-            (click)="selectTo(result)"
-          >
-            <ion-icon name="pin-outline" class="sugg-icon"></ion-icon>
-            <span class="sugg-label">{{ result.label }}</span>
-          </div>
-        </div>
-
-        <p class="search-message" *ngIf="searchMessage">{{ searchMessage }}</p>
-      </div>
-
-      <p class="routing-msg-error" *ngIf="routingError">{{ routingError }}</p>
-
-      <button
-        class="start-nav-action-btn"
-        [disabled]="!toText && !selectedTo || routingInProgress"
-        (click)="calculateRoute()"
-      >
-        <ion-spinner name="crescent" *ngIf="routingInProgress" class="btn-spinner"></ion-spinner>
-        <span *ngIf="!routingInProgress">Get directions</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Active Route Summary Bar -->
-  <div class="route-summary-bar" slot="fixed" *ngIf="navigating && routeSummary">
-    <div class="route-summary-glass">
-      <div class="route-info-group">
-        <span class="route-duration-text">{{ routeSummary.durationMin }} min</span>
-        <span class="route-meta-separator">&middot;</span>
-        <span class="route-dist-text">{{ routeSummary.distanceKm }} km</span>
-      </div>
-      <button class="exit-nav-btn" (click)="stopNavigation()">Exit</button>
-    </div>
-  </div>
-
-  <div class="route-summary-bar" slot="fixed" *ngIf="routeCalculated && routeSummary && !navigating">
-    <div class="route-summary-glass">
-      <div class="route-info-group">
-        <span class="route-duration-text">{{ routeSummary.durationMin }} min</span>
-        <span class="route-meta-separator">&middot;</span>
-        <span class="route-dist-text">{{ routeSummary.distanceKm }} km</span>
-      </div>
-      <button class="exit-nav-btn" (click)="startNavigation()">Start navigation</button>
-    </div>
   </div>
 
 </ion-content>

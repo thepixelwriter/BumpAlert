@@ -11,8 +11,17 @@ import { PotholeReport, HazardSeverity } from '../../models/pothole-report.model
 import { GeocodeResult } from '../../models/map.model';
 
 const DEFAULT_CENTER = { latitude: 28.4328, longitude: 77.5035 };
-const DEFAULT_ZOOM = 16;
+const DEFAULT_ZOOM = 17;
 const SEARCH_DEBOUNCE_MS = 400;
+const NAVIGATION_MAP_STYLES: google.maps.MapTypeStyle[] = [
+  { elementType: 'geometry', stylers: [{ color: '#073f4d' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#d2e7e9' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#073f4d' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#35536a' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#0a1f63' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#06174f' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#9fc3bf' }] },
+];
 
 export interface NearestHazardInfo {
   distanceMeters: number;
@@ -50,6 +59,8 @@ export class MapPage implements OnInit, OnDestroy {
   navigating = false;
   requiresMotionPermission = false;
   routeSummary: { distanceKm: string; durationMin: string } | null = null;
+  currentSpeedKph: number | null = null;
+  navigationMuted = false;
 
   mapLoadError: string | null = null;
   private map?: google.maps.Map;
@@ -57,6 +68,7 @@ export class MapPage implements OnInit, OnDestroy {
   private destinationMarker?: google.maps.Marker;
   private routeLine?: google.maps.Polyline;
   private lastKnownPosition: { latitude: number; longitude: number } | null = null;
+  private hasCenteredOnCurrentLocation = false;
   private readonly hazardMarkers = new Map<string, google.maps.Marker>();
   private allReports: PotholeReport[] = [];
 
@@ -124,6 +136,9 @@ export class MapPage implements OnInit, OnDestroy {
         longitude: position.coords.longitude,
         accuracy: position.coords.accuracy,
       };
+      this.currentSpeedKph = position.coords.speed === null || position.coords.speed < 0
+        ? null
+        : Math.round(position.coords.speed * 3.6);
       this.updateCurrentLocation(position.coords.latitude, position.coords.longitude);
       if (this.navigating) {
         this.map?.panTo({ lat: position.coords.latitude, lng: position.coords.longitude });
@@ -187,58 +202,20 @@ export class MapPage implements OnInit, OnDestroy {
       this.map = new maps.Map(this.mapContainerRef.nativeElement, {
         center: { lat: DEFAULT_CENTER.latitude, lng: DEFAULT_CENTER.longitude },
         zoom: DEFAULT_ZOOM,
-        disableDefaultUI: true,
-        zoomControl: false,
-        styles: [
-          { elementType: 'geometry', stylers: [{ color: '#0e131b' }] },
-          { elementType: 'labels.text.stroke', stylers: [{ color: '#0e131b' }, { weight: 2 }] },
-          { elementType: 'labels.text.fill', stylers: [{ color: '#7e8c9f' }] },
-          {
-            featureType: 'administrative.locality',
-            elementType: 'labels.text.fill',
-            stylers: [{ color: '#94a3b8' }],
-          },
-          {
-            featureType: 'poi',
-            elementType: 'labels.text.fill',
-            stylers: [{ color: '#475569' }],
-          },
-          {
-            featureType: 'road',
-            elementType: 'geometry',
-            stylers: [{ color: '#1a2332' }],
-          },
-          {
-            featureType: 'road',
-            elementType: 'geometry.stroke',
-            stylers: [{ color: '#121822' }],
-          },
-          {
-            featureType: 'road',
-            elementType: 'labels.text.fill',
-            stylers: [{ color: '#64748b' }],
-          },
-          {
-            featureType: 'road.highway',
-            elementType: 'geometry',
-            stylers: [{ color: '#253347' }],
-          },
-          {
-            featureType: 'road.highway',
-            elementType: 'geometry.stroke',
-            stylers: [{ color: '#17202d' }],
-          },
-          {
-            featureType: 'water',
-            elementType: 'geometry',
-            stylers: [{ color: '#090e15' }],
-          },
-          {
-            featureType: 'water',
-            elementType: 'labels.text.fill',
-            stylers: [{ color: '#334155' }],
-          },
-        ],
+        // Keep the familiar Google Maps controls available on the map itself.
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true,
+        rotateControl: true,
+        scaleControl: true,
+        clickableIcons: true,
+        gestureHandling: 'greedy',
+        mapTypeControlOptions: { position: maps.ControlPosition.TOP_RIGHT },
+        zoomControlOptions: { position: maps.ControlPosition.RIGHT_CENTER },
+        streetViewControlOptions: { position: maps.ControlPosition.RIGHT_CENTER },
+        fullscreenControlOptions: { position: maps.ControlPosition.RIGHT_TOP },
       });
     } catch (error) {
       console.error('BumpAlert: map initialization failed', error);
@@ -314,8 +291,15 @@ export class MapPage implements OnInit, OnDestroy {
         title: 'Your Location',
       });
       this.map.setCenter(position);
+      this.map.setZoom(DEFAULT_ZOOM);
+      this.hasCenteredOnCurrentLocation = true;
     } else {
       this.currentLocationMarker.setPosition(position);
+      if (!this.hasCenteredOnCurrentLocation) {
+        this.map.setCenter(position);
+        this.map.setZoom(DEFAULT_ZOOM);
+        this.hasCenteredOnCurrentLocation = true;
+      }
     }
   }
 
@@ -420,6 +404,7 @@ export class MapPage implements OnInit, OnDestroy {
       this.updateCurrentLocation(position.coords.latitude, position.coords.longitude);
       this.map?.setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
       this.map?.setZoom(DEFAULT_ZOOM);
+      this.hasCenteredOnCurrentLocation = true;
     } catch (error) {
       console.warn('BumpAlert: locateMe failed', error);
     }
@@ -504,6 +489,7 @@ export class MapPage implements OnInit, OnDestroy {
     if (!this.routeCalculated || !this.routeSummary) return;
     this.navigating = true;
     this.searchPanelOpen = false;
+    this.map?.setOptions({ styles: NAVIGATION_MAP_STYLES, mapTypeControl: false });
     void this.toastCtrl.create({
       message: 'Navigation started. The map will follow your live location.',
       duration: 2500,
@@ -542,6 +528,21 @@ export class MapPage implements OnInit, OnDestroy {
     this.selectedTo = null;
     this.toText = '';
     this.routeCalculated = false;
+    this.currentSpeedKph = null;
+    this.map?.setOptions({ styles: null, mapTypeControl: true });
+  }
+
+  toggleNavigationAudio(): void {
+    this.navigationMuted = !this.navigationMuted;
+  }
+
+  async explainAutomaticReporting(): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message: 'Road anomalies detected during navigation are saved automatically.',
+      duration: 2600,
+      position: 'bottom',
+    });
+    await toast.present();
   }
 
   private clearRoute(): void {
