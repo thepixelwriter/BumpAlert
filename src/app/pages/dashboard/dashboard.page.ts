@@ -263,7 +263,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   goToTripSummary(): void {
-    void this.router.navigateByUrl('/tabs/trip-summary');
+    void this.router.navigateByUrl('/trip-summary');
   }
 
   /** Floating "locate me" button - re-centers the map on a fresh GPS fix. */
