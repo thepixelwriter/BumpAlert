@@ -1,2 +1,91 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+/**
+ * BumpAlert Low-Contrast Premium Automotive / Dark Dashboard Theme Tokens
+ */
+
+:root {
+  --ion-font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Deep Midnight Onyx Base */
+  --ion-background-color: #0e131b;
+  --ion-background-color-rgb: 14, 19, 27;
+
+  --ion-text-color: #e2e8f0;
+  --ion-text-color-rgb: 226, 232, 240;
+
+  /* Step palette for smooth depth layering */
+  --ion-color-step-50: #121822;
+  --ion-color-step-100: #17202c;
+  --ion-color-step-150: #1d2737;
+  --ion-color-step-200: #232e41;
+  --ion-color-step-300: #2f3e57;
+  --ion-color-step-400: #94a3b8;
+  --ion-color-step-500: #64748b;
+  --ion-color-step-600: #475569;
+  --ion-color-step-700: #334155;
+  --ion-color-step-800: #1e293b;
+  --ion-color-step-900: #0f172a;
+
+  /* Primary Accent: Muted Ice Blue */
+  --ion-color-primary: #38bdf8;
+  --ion-color-primary-rgb: 56, 189, 248;
+  --ion-color-primary-contrast: #0f172a;
+  --ion-color-primary-contrast-rgb: 15, 23, 42;
+  --ion-color-primary-shade: #0284c7;
+  --ion-color-primary-tint: #7dd3fc;
+
+  /* Danger / Alarming: Soft Desaturated Crimson */
+  --ion-color-danger: #f87171;
+  --ion-color-danger-rgb: 248, 113, 113;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #dc2626;
+  --ion-color-danger-tint: #fca5a5;
+
+  /* Warning / Severe: Soft Terracotta / Warm Amber */
+  --ion-color-warning: #fb923c;
+  --ion-color-warning-rgb: 251, 146, 60;
+  --ion-color-warning-contrast: #0f172a;
+  --ion-color-warning-contrast-rgb: 15, 23, 42;
+  --ion-color-warning-shade: #ea580c;
+  --ion-color-warning-tint: #fdba74;
+
+  /* Success: Soft Sage Mint */
+  --ion-color-success: #34d399;
+  --ion-color-success-rgb: 52, 211, 153;
+  --ion-color-success-contrast: #0f172a;
+  --ion-color-success-contrast-rgb: 15, 23, 42;
+  --ion-color-success-shade: #059669;
+  --ion-color-success-tint: #6ee7b7;
+
+  /* Standardized Low-Contrast Design System Variables */
+  --app-card-radius: 14px;
+  --app-element-radius: 8px;
+  --app-border-subtle: 1px solid rgba(var(--ion-text-color-rgb), 0.06);
+  --app-glass-bg: rgba(14, 19, 27, 0.82);
+  --app-surface-1: #17202c;
+  --app-surface-2: #1d2737;
+  --app-surface-hover: #232e41;
+
+  /* Semantic Alert Tokens (Desaturated, Non-Glare) */
+  --alert-moderate-text: #fbbf24;
+  --alert-moderate-bg: rgba(245, 158, 11, 0.08);
+  --alert-moderate-border: rgba(245, 158, 11, 0.2);
+  --alert-moderate-dot: #f59e0b;
+
+  --alert-severe-text: #fb923c;
+  --alert-severe-bg: rgba(249, 115, 22, 0.08);
+  --alert-severe-border: rgba(249, 115, 22, 0.22);
+  --alert-severe-dot: #f97316;
+
+  --alert-alarming-text: #f87171;
+  --alert-alarming-bg: rgba(239, 68, 68, 0.09);
+  --alert-alarming-border: rgba(239, 68, 68, 0.24);
+  --alert-alarming-dot: #ef4444;
+
+  /* Item & Toolbar Defaults */
+  --ion-toolbar-background: #0e131b;
+  --ion-toolbar-color: #e2e8f0;
+  --ion-toolbar-border-color: rgba(var(--ion-text-color-rgb), 0.06);
+  --ion-item-background: transparent;
+  --ion-item-color: var(--ion-text-color);
+}

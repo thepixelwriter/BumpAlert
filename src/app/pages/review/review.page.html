@@ -1,0 +1,259 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="glass-toolbar">
+    <ion-title class="app-header-title">Telemetry Review</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="review-canvas-content">
+
+  <!-- Pull down the screen to reload / fetch fresh telemetry -->
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      pullingText="Pull down to refresh telemetry..."
+      refreshingSpinner="crescent"
+      refreshingText="Refreshing road hazard zones..."
+    ></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Main Content Wrapper -->
+  <div class="canvas-wrapper">
+
+    <!-- Metrics Summary Dashboard Canvas (No >= or <= symbols) -->
+    <section class="summary-section">
+      <div class="metrics-grid">
+        <!-- Metric 1: Total -->
+        <div class="metric-card">
+          <div class="metric-header-row">
+            <span class="metric-caption">TOTAL DETECTIONS</span>
+            <span class="status-indicator-dot dot-neutral"></span>
+          </div>
+          <div class="metric-number-row">
+            <span class="metric-value">{{ totalHazardsCount }}</span>
+            <span class="metric-unit">events</span>
+          </div>
+        </div>
+
+        <!-- Metric 2: Alarming -->
+        <div class="metric-card metric-alarming-card">
+          <div class="metric-header-row">
+            <span class="metric-caption">ALARMING</span>
+            <span class="status-indicator-dot dot-alarming"></span>
+          </div>
+          <div class="metric-number-row">
+            <span class="metric-value text-alarming">{{ alarmingCount }}</span>
+            <span class="metric-unit text-muted">critical</span>
+          </div>
+        </div>
+
+        <!-- Metric 3: Severe -->
+        <div class="metric-card metric-severe-card">
+          <div class="metric-header-row">
+            <span class="metric-caption">SEVERE</span>
+            <span class="status-indicator-dot dot-severe"></span>
+          </div>
+          <div class="metric-number-row">
+            <span class="metric-value text-severe">{{ severeCount }}</span>
+            <span class="metric-unit text-muted">hazards</span>
+          </div>
+        </div>
+
+        <!-- Metric 4: Peak G-Force -->
+        <div class="metric-card">
+          <div class="metric-header-row">
+            <span class="metric-caption">PEAK IMPACT</span>
+            <span class="status-indicator-dot dot-primary"></span>
+          </div>
+          <div class="metric-number-row">
+            <span class="metric-value text-primary">{{ maxGForce | number: '1.2-2' }}</span>
+            <span class="metric-unit">G-Force</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Header (corrected radii to radius) -->
+    <div class="section-title-wrapper">
+      <div>
+        <h2 class="section-heading">Road Hazard Zones</h2>
+        <p class="section-subtext">Grouped within 500m proximity radius</p>
+      </div>
+      <span class="cluster-count-badge">{{ clusters.length }} zones</span>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state-canvas" *ngIf="clusters.length === 0">
+      <div class="empty-icon-ring">
+        <ion-icon name="shield-checkmark-outline"></ion-icon>
+      </div>
+      <h3 class="empty-title">No Telemetry Recorded</h3>
+      <p class="empty-desc">Pull down to refresh, record bumps in Map mode, or load sample telemetry.</p>
+      <ion-button fill="outline" class="soft-action-btn" (click)="resetSeedData()">
+        Load Sample Telemetry
+      </ion-button>
+    </div>
+
+    <!-- Grouped Clusters Canvas (Collapsed by default, No Left Border) -->
+    <div class="clusters-container" *ngIf="clusters.length > 0">
+      
+      <div *ngFor="let cluster of clusters; let i = index" class="cluster-node">
+        
+        <!-- Cluster Summary Card (Clean uniform border, No Left Stripe) -->
+        <div
+          class="cluster-summary-card"
+          (click)="toggleCluster(cluster.id)"
+        >
+          <div class="cluster-card-body">
+            <!-- Top Status Row -->
+            <div class="cluster-meta-row">
+              <div class="badges-flex">
+                <span class="tier-pill" [ngClass]="'pill-' + cluster.dominantSeverity">
+                  <span class="pill-dot" [ngClass]="'dot-' + cluster.dominantSeverity"></span>
+                  {{ getDominantSeverityLabel(cluster.dominantSeverity) }}
+                </span>
+                <span class="status-pill" [ngClass]="'status-' + cluster.status">
+                  {{ cluster.status | uppercase }}
+                </span>
+              </div>
+              <ion-icon
+                [name]="isClusterExpanded(cluster.id) ? 'chevron-up' : 'chevron-down'"
+                class="cluster-expand-chevron"
+              ></ion-icon>
+            </div>
+
+            <!-- Meaningful Everyday Title and Coordinates -->
+            <div class="cluster-headline-row">
+              <h3 class="cluster-name">Road Hazard Zone {{ i + 1 }}</h3>
+              <p class="cluster-sub-count">
+                {{ cluster.totalDetections }} {{ cluster.totalDetections === 1 ? 'road impact' : 'road impacts' }} recorded
+              </p>
+              <p class="cluster-coords">
+                Zone Center: {{ cluster.center.latitude | number: '1.5-5' }}° N, {{ cluster.center.longitude | number: '1.5-5' }}° E
+              </p>
+            </div>
+
+            <!-- Stats & Action Footer -->
+            <div class="cluster-footer-row">
+              <div class="cluster-stat-item">
+                <span class="stat-meta-label">Peak Impact:</span>
+                <span class="stat-meta-val" [ngClass]="'text-' + cluster.dominantSeverity">
+                  {{ cluster.peakGForce | number: '1.2-2' }} G
+                </span>
+              </div>
+
+              <div class="cluster-stat-item">
+                <span class="stat-meta-label">Recorded:</span>
+                <span class="stat-meta-val text-muted">
+                  {{ cluster.earliestTimestamp | date: 'shortTime' }} – {{ cluster.latestTimestamp | date: 'shortTime' }}
+                </span>
+              </div>
+
+              <div class="cluster-submit-action">
+                <ion-button
+                  size="small"
+                  fill="clear"
+                  class="submit-cluster-btn"
+                  (click)="$event.stopPropagation(); submitCluster(cluster)"
+                  [disabled]="cluster.status === 'submitted'"
+                >
+                  <ion-icon slot="start" name="checkmark-done-outline"></ion-icon>
+                  Report Zone
+                </ion-button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nested Individual Detections (Only visible when tapped/expanded) -->
+        <div class="nested-detections-canvas" *ngIf="isClusterExpanded(cluster.id)">
+          <div
+            *ngFor="let report of cluster.reports"
+            class="detection-entry-card"
+          >
+            <div class="detection-entry-body">
+              <!-- Left: Detection Telemetry Data -->
+              <div class="telemetry-info-col">
+                <div class="telemetry-primary-row">
+                  <span class="entry-tier-badge" [ngClass]="'badge-' + report.severity">
+                    {{ report.severity | uppercase }}
+                  </span>
+                  <span class="entry-gforce-val" [ngClass]="'val-' + report.severity">
+                    {{ report.gForce | number: '1.2-2' }} G
+                  </span>
+                  <span class="entry-time-stamp">{{ report.timestamp | date: 'mediumTime' }}</span>
+                </div>
+                <div class="telemetry-location-row">
+                  <span class="location-label">GPS:</span>
+                  <span class="location-coords">{{ report.latitude | number: '1.6-6' }}, {{ report.longitude | number: '1.6-6' }}</span>
+                </div>
+              </div>
+
+              <!-- Right: Actions Flexbox -->
+              <div class="entry-actions-col">
+                <!-- Share Grievance for Severe & Alarming Impacts -->
+                <ion-button
+                  *ngIf="report.severity === 'alarming' || report.severity === 'severe'"
+                  size="small"
+                  fill="outline"
+                  class="grievance-share-btn"
+                  [ngClass]="'share-' + report.severity"
+                  (click)="shareGrievance($event, report)"
+                >
+                  <ion-icon slot="start" name="share-social-outline"></ion-icon>
+                  Share
+                </ion-button>
+
+                <ion-button
+                  size="small"
+                  fill="clear"
+                  class="item-icon-action-btn btn-confirm"
+                  (click)="confirmReport($event, report.id)"
+                  [disabled]="report.status === 'confirmed' || report.status === 'submitted'"
+                  title="Confirm Detection"
+                >
+                  <ion-icon slot="icon-only" name="checkmark-circle-outline"></ion-icon>
+                </ion-button>
+
+                <ion-button
+                  size="small"
+                  fill="clear"
+                  class="item-icon-action-btn btn-dismiss"
+                  (click)="dismissReport($event, report.id)"
+                  title="Dismiss Detection"
+                >
+                  <ion-icon slot="icon-only" name="close-circle-outline"></ion-icon>
+                </ion-button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- BOTTOM ACTION AREA: Reset Data and Report All to Agency at bottom of the app -->
+    <div class="bottom-action-panel">
+      <ion-button
+        fill="clear"
+        class="bottom-reset-btn"
+        (click)="resetSeedData()"
+      >
+        <ion-icon slot="start" name="refresh-outline"></ion-icon>
+        Reset Sample Data
+      </ion-button>
+
+      <ion-button
+        fill="solid"
+        class="bottom-report-all-btn"
+        (click)="submitAllHazards()"
+        [disabled]="rawReports.length === 0 || unsubmittedCount === 0"
+      >
+        <ion-icon slot="start" name="cloud-upload-outline"></ion-icon>
+        Report All Hazards ({{ unsubmittedCount }})
+      </ion-button>
+    </div>
+
+  </div>
+
+</ion-content>

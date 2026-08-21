@@ -41,6 +41,7 @@ public class BumpDetectionService extends Service implements SensorEventListener
     private static final double GRAVITY_G = 9.80665;
     private static final double MODERATE_G_THRESHOLD = 1.8;
     private static final double SEVERE_G_THRESHOLD = 2.2;
+    private static final double ALARMING_G_THRESHOLD = 4.0;
     private static final long DETECTION_COOLDOWN_MS = 2000;
 
     private SensorManager sensorManager;
@@ -150,7 +151,9 @@ public class BumpDetectionService extends Service implements SensorEventListener
         }
 
         String severity = null;
-        if (gForce >= SEVERE_G_THRESHOLD) {
+        if (gForce >= ALARMING_G_THRESHOLD) {
+            severity = "alarming";
+        } else if (gForce >= SEVERE_G_THRESHOLD) {
             severity = "severe";
         } else if (gForce >= MODERATE_G_THRESHOLD) {
             severity = "moderate";

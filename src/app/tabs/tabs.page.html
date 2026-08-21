@@ -1,20 +1,22 @@
 <ion-tabs>
 
-  <ion-tab-bar slot="bottom">
-    <ion-tab-button tab="detection" href="/tabs/detection">
-      <ion-icon aria-hidden="true" name="speedometer-outline"></ion-icon>
-      <ion-label>Detection</ion-label>
+  <ion-tab-bar slot="bottom" class="custom-tab-bar">
+
+    <!-- Tab 1: Map (default, first) — no label -->
+    <ion-tab-button tab="map" href="/tabs/map" aria-label="Map & Navigation">
+      <ion-icon name="navigate-circle-outline"></ion-icon>
     </ion-tab-button>
 
-    <ion-tab-button tab="dashboard" href="/tabs/dashboard">
-      <ion-icon aria-hidden="true" name="navigate-outline"></ion-icon>
-      <ion-label>Navigate</ion-label>
+    <!-- Tab 2: Telemetry Review — no label -->
+    <ion-tab-button tab="review" href="/tabs/review" aria-label="Telemetry Review">
+      <ion-icon name="layers-outline"></ion-icon>
     </ion-tab-button>
 
-    <ion-tab-button tab="trip-summary" href="/tabs/trip-summary">
-      <ion-icon aria-hidden="true" name="list-outline"></ion-icon>
-      <ion-label>Trip Summary</ion-label>
+    <!-- Tab 3: Settings — no label -->
+    <ion-tab-button tab="settings" href="/tabs/settings" aria-label="Settings">
+      <ion-icon name="settings-outline"></ion-icon>
     </ion-tab-button>
+
   </ion-tab-bar>
 
 </ion-tabs>

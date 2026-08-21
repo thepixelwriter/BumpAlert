@@ -1,0 +1,203 @@
+<ion-content [fullscreen]="true" class="map-page-viewport">
+  
+  <!-- Fullscreen Google Map Container -->
+  <div class="map-render-canvas">
+    <div #mapContainer class="map-dom-container"></div>
+
+    <div class="map-error-banner" *ngIf="mapLoadError">
+      <ion-icon name="alert-circle-outline"></ion-icon>
+      <p>{{ mapLoadError }}</p>
+    </div>
+  </div>
+
+  <!-- FLOATING HUD LAYER: Real-time Telemetry & Proximity Metrics -->
+  <div class="map-floating-hud" slot="fixed">
+
+    <!-- Top Left: Live G-Force Meter Widget -->
+    <div class="hud-widget gforce-hud-widget">
+      <div class="hud-widget-header">
+        <span class="hud-caption">LIVE TELEMETRY</span>
+        <span class="sensing-status-tag" [ngClass]="isRideActive ? 'status-active' : 'status-idle'">
+          <span class="status-pulse-dot"></span>
+          {{ isRideActive ? 'SENSING' : 'PAUSED' }}
+        </span>
+      </div>
+
+      <div class="hud-metric-row">
+        <span
+          class="hud-gforce-number"
+          [ngClass]="{
+            'gforce-alarming': currentGForce >= 4.0,
+            'gforce-severe': currentGForce >= 2.2 && currentGForce < 4.0,
+            'gforce-moderate': currentGForce >= 1.8 && currentGForce < 2.2
+          }"
+        >
+          {{ currentGForce | number: '1.2-2' }}
+        </span>
+        <span class="hud-gforce-unit">G</span>
+      </div>
+
+      <div class="hud-meter-track">
+        <div
+          class="hud-meter-fill"
+          [style.width.%]="(currentGForce / 4.0) * 100 > 100 ? 100 : (currentGForce / 4.0) * 100"
+          [ngClass]="{
+            'meter-alarming': currentGForce >= 4.0,
+            'meter-severe': currentGForce >= 2.2 && currentGForce < 4.0,
+            'meter-moderate': currentGForce >= 1.8 && currentGForce < 2.2
+          }"
+        ></div>
+      </div>
+    </div>
+
+    <!-- Top Right: Nearest Pothole Proximity Alert Widget -->
+    <div class="hud-widget proximity-hud-widget" *ngIf="nearestHazard">
+      <div class="hud-widget-header">
+        <span class="hud-caption">PROXIMITY WARNING</span>
+        <span class="proximity-tier-pill" [ngClass]="'pill-' + nearestHazard.report.severity">
+          {{ nearestHazard.report.severity | uppercase }}
+        </span>
+      </div>
+
+      <div class="proximity-body-row">
+        <div class="proximity-icon-wrap" [ngClass]="'icon-' + nearestHazard.report.severity">
+          <ion-icon name="warning-outline"></ion-icon>
+        </div>
+        <div class="proximity-info-col">
+          <div class="proximity-distance">
+            {{ nearestHazard.distanceMeters < 1000 ? nearestHazard.distanceMeters + ' m' : (nearestHazard.distanceMeters / 1000 | number: '1.1-1') + ' km' }} ahead
+          </div>
+          <div class="proximity-spike-val">Peak Impact: {{ nearestHazard.report.gForce | number: '1.2-2' }}G</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FLOATING ACTION CONTROLS (Bottom Right) -->
+  <div class="map-action-controls" slot="fixed">
+    <!-- Toggle Sensing -->
+    <button
+      class="glass-circle-btn"
+      [ngClass]="isRideActive ? 'btn-sensing-on' : 'btn-sensing-off'"
+      (click)="toggleRide()"
+      title="Toggle Ride Sensing"
+    >
+      <ion-icon [name]="isRideActive ? 'pause' : 'play'"></ion-icon>
+    </button>
+
+    <!-- Recenter on GPS -->
+    <button class="glass-circle-btn" (click)="locateMe()" title="Locate Current Position">
+      <ion-icon name="locate-outline"></ion-icon>
+    </button>
+
+    <!-- Route Navigation Toggle -->
+    <button
+      class="glass-circle-btn btn-primary-accent"
+      [class.btn-active]="searchPanelOpen"
+      (click)="toggleSearchPanel()"
+      title="Navigation Route Planner"
+    >
+      <ion-icon [name]="searchPanelOpen ? 'close-outline' : 'navigate-outline'"></ion-icon>
+    </button>
+  </div>
+
+  <!-- Route Search / Navigation Panel -->
+  <div class="search-panel-overlay" slot="fixed" *ngIf="searchPanelOpen">
+    <div class="search-glass-card">
+      <div class="search-field-group">
+        <div class="input-row">
+          <ion-icon name="radio-button-on-outline" class="input-icon-origin"></ion-icon>
+          <input
+            type="text"
+            class="clean-search-input"
+            placeholder="Origin (Current GPS fix)"
+            [value]="fromText"
+            (input)="onFromInput($any($event.target).value)"
+          />
+        </div>
+        
+        <div *ngIf="fromResults.length > 0" class="suggestions-drop">
+          <div
+            *ngFor="let result of fromResults"
+            class="suggestion-row"
+            (click)="selectFrom(result)"
+          >
+            <ion-icon name="location-outline" class="sugg-icon"></ion-icon>
+            <span class="sugg-label">{{ result.label }}</span>
+          </div>
+        </div>
+
+        <div class="input-divider"></div>
+
+        <div class="input-row">
+          <ion-icon name="location-outline" class="input-icon-dest"></ion-icon>
+          <input
+            type="text"
+            class="clean-search-input"
+            placeholder="Enter destination"
+            [value]="toText"
+            (input)="onToInput($any($event.target).value)"
+          />
+        </div>
+
+        <div *ngIf="toResults.length > 0" class="suggestions-drop">
+          <div
+            *ngFor="let result of toResults"
+            class="suggestion-row"
+            (click)="selectTo(result)"
+          >
+            <ion-icon name="pin-outline" class="sugg-icon"></ion-icon>
+            <span class="sugg-label">{{ result.label }}</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="routing-msg-error" *ngIf="routingError">{{ routingError }}</p>
+
+      <button
+        class="start-nav-action-btn"
+        [disabled]="!toText && !selectedTo || routingInProgress"
+        (click)="startNavigation()"
+      >
+        <ion-spinner name="crescent" *ngIf="routingInProgress" class="btn-spinner"></ion-spinner>
+        <span *ngIf="!routingInProgress">Compute Route</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Active Route Summary Bar -->
+  <div class="route-summary-bar" slot="fixed" *ngIf="navigating && routeSummary">
+    <div class="route-summary-glass">
+      <div class="route-info-group">
+        <span class="route-duration-text">{{ routeSummary.durationMin }} min</span>
+        <span class="route-meta-separator">&middot;</span>
+        <span class="route-dist-text">{{ routeSummary.distanceKm }} km</span>
+      </div>
+      <button class="exit-nav-btn" (click)="stopNavigation()">Exit</button>
+    </div>
+  </div>
+
+  <!-- Real-Time Spike Detected Alert -->
+  <div class="realtime-alert-toast" slot="fixed" [class.alert-show]="activeAlert">
+    <div class="alert-glass-box" *ngIf="activeAlert">
+      <div class="alert-top-line">
+        <div class="alert-title-wrap">
+          <span class="alert-indicator-dot" [ngClass]="'dot-' + activeAlert.severity"></span>
+          <span class="alert-heading">Road Hazard Detected</span>
+        </div>
+        <span class="alert-spike-tag">{{ activeAlert.gForce | number: '1.2-2' }} G</span>
+      </div>
+      
+      <div class="alert-progress-bar">
+        <div class="alert-progress-fill" [style.width.%]="alertProgress * 100"></div>
+      </div>
+
+      <div class="alert-action-buttons">
+        <button class="alert-btn btn-dismiss" (click)="dismiss()">Dismiss</button>
+        <button class="alert-btn btn-confirm" (click)="quickReport()">Confirm Bump</button>
+      </div>
+    </div>
+  </div>
+
+</ion-content>

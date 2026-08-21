@@ -1,0 +1,614 @@
+.map-page-viewport {
+  --background: var(--ion-background-color);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.map-render-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.map-dom-container {
+  width: 100%;
+  height: 100%;
+}
+
+.map-error-banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  background: rgba(14, 19, 27, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
+  border-radius: var(--app-card-radius);
+  padding: 20px;
+  color: var(--alert-alarming-text);
+  max-width: 85%;
+
+  ion-icon {
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+}
+
+/* 1. Integrated Glassmorphic Floating HUD Layer */
+.map-floating-hud {
+  position: absolute;
+  top: calc(16px + env(safe-area-inset-top));
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.hud-widget {
+  pointer-events: auto;
+  background: rgba(var(--ion-background-color-rgb), 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(var(--ion-text-color-rgb), 0.05);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.25);
+  border-radius: var(--app-card-radius);
+  padding: 10px 14px;
+  transition: transform 0.15s ease, background 0.15s ease;
+
+  .hud-widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+
+    .hud-caption {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--ion-color-step-400);
+      letter-spacing: 0.05em;
+      line-height: 1.4;
+    }
+  }
+}
+
+/* G-Force HUD */
+.gforce-hud-widget {
+  min-width: 140px;
+
+  .sensing-status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: var(--app-element-radius);
+    letter-spacing: 0.02em;
+
+    .status-pulse-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+    }
+
+    &.status-active {
+      background: rgba(52, 211, 153, 0.1);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.2);
+      .status-pulse-dot { background: #34d399; }
+    }
+
+    &.status-idle {
+      background: rgba(var(--ion-text-color-rgb), 0.05);
+      color: var(--ion-color-step-400);
+      border: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
+      .status-pulse-dot { background: var(--ion-color-step-400); }
+    }
+  }
+
+  .hud-metric-row {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    margin: 2px 0 6px;
+
+    .hud-gforce-number {
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+
+      &.gforce-alarming {
+        color: var(--alert-alarming-text);
+      }
+      &.gforce-severe {
+        color: var(--alert-severe-text);
+      }
+      &.gforce-moderate {
+        color: var(--alert-moderate-text);
+      }
+    }
+
+    .hud-gforce-unit {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--ion-color-step-400);
+    }
+  }
+
+  .hud-meter-track {
+    width: 100%;
+    height: 3.5px;
+    background: rgba(var(--ion-text-color-rgb), 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+
+    .hud-meter-fill {
+      height: 100%;
+      background: #38bdf8;
+      transition: width 0.12s ease-out;
+
+      &.meter-moderate { background: var(--alert-moderate-dot); }
+      &.meter-severe { background: var(--alert-severe-dot); }
+      &.meter-alarming { background: var(--alert-alarming-dot); }
+    }
+  }
+}
+
+/* Proximity HUD */
+.proximity-hud-widget {
+  max-width: 190px;
+
+  .proximity-tier-pill {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: var(--app-element-radius);
+
+    &.pill-alarming {
+      background: var(--alert-alarming-bg);
+      color: var(--alert-alarming-text);
+      border: 1px solid var(--alert-alarming-border);
+    }
+    &.pill-severe {
+      background: var(--alert-severe-bg);
+      color: var(--alert-severe-text);
+      border: 1px solid var(--alert-severe-border);
+    }
+    &.pill-moderate {
+      background: var(--alert-moderate-bg);
+      color: var(--alert-moderate-text);
+      border: 1px solid var(--alert-moderate-border);
+    }
+  }
+
+  .proximity-body-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+
+    .proximity-icon-wrap {
+      font-size: 1.3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &.icon-alarming { color: var(--alert-alarming-text); }
+      &.icon-severe { color: var(--alert-severe-text); }
+      &.icon-moderate { color: var(--alert-moderate-text); }
+    }
+
+    .proximity-info-col {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .proximity-distance {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--ion-text-color);
+      line-height: 1.3;
+    }
+
+    .proximity-spike-val {
+      font-size: 0.72rem;
+      color: var(--ion-color-step-400);
+      line-height: 1.3;
+    }
+  }
+}
+
+/* 2. Floating Action Controls (Clean circular buttons) */
+.map-action-controls {
+  position: absolute;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 100;
+}
+
+.glass-circle-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(var(--ion-background-color-rgb), 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  color: var(--ion-text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: var(--app-surface-2);
+    border-color: rgba(var(--ion-text-color-rgb), 0.15);
+  }
+
+  &:active {
+    transform: scale(0.94);
+  }
+
+  &.btn-sensing-on {
+    color: var(--alert-alarming-text);
+    border-color: var(--alert-alarming-border);
+    background: var(--alert-alarming-bg);
+  }
+
+  &.btn-sensing-off {
+    color: #34d399;
+  }
+
+  &.btn-primary-accent {
+    color: #38bdf8;
+
+    &.btn-active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+  }
+}
+
+/* 3. Search & Route Planner Overlay */
+.search-panel-overlay {
+  position: absolute;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  left: 16px;
+  right: 76px;
+  max-width: 420px;
+  z-index: 100;
+}
+
+.search-glass-card {
+  background: rgba(var(--ion-background-color-rgb), 0.86);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
+  border-radius: var(--app-card-radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .search-field-group {
+    background: var(--app-surface-1);
+    border: 1px solid rgba(var(--ion-text-color-rgb), 0.05);
+    border-radius: var(--app-element-radius);
+    padding: 2px 8px;
+  }
+
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+
+    .input-icon-origin {
+      color: #34d399;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .input-icon-dest {
+      color: var(--alert-alarming-text);
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .clean-search-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--ion-text-color);
+      font-size: 0.85rem;
+      outline: none;
+      line-height: 1.4;
+
+      &::placeholder {
+        color: var(--ion-color-step-500);
+      }
+    }
+  }
+
+  .input-divider {
+    height: 1px;
+    background: rgba(var(--ion-text-color-rgb), 0.05);
+    margin: 0 4px;
+  }
+
+  .suggestions-drop {
+    max-height: 130px;
+    overflow-y: auto;
+    border-top: 1px solid rgba(var(--ion-text-color-rgb), 0.06);
+    padding: 4px 0;
+
+    .suggestion-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      color: var(--ion-text-color);
+      transition: background 0.12s ease;
+
+      &:hover {
+        background: rgba(var(--ion-text-color-rgb), 0.05);
+      }
+
+      .sugg-icon {
+        color: var(--ion-color-step-400);
+        font-size: 0.85rem;
+        flex-shrink: 0;
+      }
+
+      .sugg-label {
+        line-height: 1.35;
+      }
+    }
+  }
+
+  .routing-msg-error {
+    color: var(--alert-alarming-text);
+    font-size: 0.75rem;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .start-nav-action-btn {
+    width: 100%;
+    height: 36px;
+    background: #0284c7;
+    color: #ffffff;
+    border: none;
+    border-radius: var(--app-element-radius);
+    font-weight: 600;
+    font-size: 0.82rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease;
+
+    &:hover:not(:disabled) {
+      background: #0369a1;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-spinner {
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+/* 4. Active Route Summary Bar */
+.route-summary-bar {
+  position: absolute;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 16px;
+  right: 76px;
+  max-width: 360px;
+  z-index: 100;
+}
+
+.route-summary-glass {
+  background: rgba(var(--ion-background-color-rgb), 0.86);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
+  border-radius: var(--app-card-radius);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+
+  .route-info-group {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+
+    .route-duration-text {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .route-meta-separator {
+      color: var(--ion-color-step-500);
+    }
+
+    .route-dist-text {
+      font-size: 0.85rem;
+      color: var(--ion-color-step-400);
+    }
+  }
+
+  .exit-nav-btn {
+    background: rgba(248, 113, 113, 0.1);
+    color: var(--alert-alarming-text);
+    border: 1px solid var(--alert-alarming-border);
+    border-radius: var(--app-element-radius);
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(248, 113, 113, 0.18);
+    }
+  }
+}
+
+/* 5. Real-Time Spike Detected Alert Toast */
+.realtime-alert-toast {
+  position: absolute;
+  top: calc(80px + env(safe-area-inset-top));
+  left: 16px;
+  right: 16px;
+  max-width: 440px;
+  margin: 0 auto;
+  z-index: 150;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+  transform: translateY(-16px);
+  opacity: 0;
+  pointer-events: none;
+
+  &.alert-show {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.alert-glass-box {
+  background: rgba(14, 19, 27, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(var(--ion-text-color-rgb), 0.1);
+  border-radius: var(--app-card-radius);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .alert-top-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .alert-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .alert-indicator-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+
+        &.dot-alarming { background: var(--alert-alarming-dot); }
+        &.dot-severe { background: var(--alert-severe-dot); }
+        &.dot-moderate { background: var(--alert-moderate-dot); }
+      }
+
+      .alert-heading {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--ion-text-color);
+      }
+    }
+
+    .alert-spike-tag {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+  }
+
+  .alert-progress-bar {
+    width: 100%;
+    height: 3px;
+    background: rgba(var(--ion-text-color-rgb), 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+
+    .alert-progress-fill {
+      height: 100%;
+      background: #fb923c;
+      transition: width 0.1s linear;
+    }
+  }
+
+  .alert-action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+
+    .alert-btn {
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: var(--app-element-radius);
+      cursor: pointer;
+
+      &.btn-dismiss {
+        background: transparent;
+        border: 1px solid rgba(var(--ion-text-color-rgb), 0.08);
+        color: var(--ion-color-step-400);
+
+        &:hover {
+          background: rgba(var(--ion-text-color-rgb), 0.05);
+        }
+      }
+
+      &.btn-confirm {
+        background: rgba(251, 146, 60, 0.12);
+        border: 1px solid rgba(251, 146, 60, 0.25);
+        color: #fb923c;
+
+        &:hover {
+          background: rgba(251, 146, 60, 0.2);
+        }
+      }
+    }
+  }
+}

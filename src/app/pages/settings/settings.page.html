@@ -1,0 +1,203 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="glass-toolbar">
+    <ion-title class="app-header-title">Settings & Preferences</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="settings-canvas-content">
+
+  <div class="settings-wrapper">
+
+    <!-- Section 1: Severity Color Guide (Moved here from header) -->
+    <div class="settings-section">
+      <div class="section-label">ROAD HAZARD SEVERITY GUIDE</div>
+      <div class="settings-card">
+        <div class="guide-item">
+          <div class="guide-dot-col">
+            <span class="guide-color-dot dot-alarming"></span>
+          </div>
+          <div class="guide-text-col">
+            <div class="guide-tier-header">
+              <span class="guide-title text-alarming">Alarming Impact</span>
+              <span class="guide-badge badge-alarming">CRITICAL</span>
+            </div>
+            <p class="guide-desc">Major deep pothole impact (> 4.0 G). High risk of wheel, suspension or balance disruption.</p>
+          </div>
+        </div>
+
+        <div class="guide-divider"></div>
+
+        <div class="guide-item">
+          <div class="guide-dot-col">
+            <span class="guide-color-dot dot-severe"></span>
+          </div>
+          <div class="guide-text-col">
+            <div class="guide-tier-header">
+              <span class="guide-title text-severe">Severe Pothole</span>
+              <span class="guide-badge badge-severe">HAZARD</span>
+            </div>
+            <p class="guide-desc">Hard road impact (2.2 G – 4.0 G). Noticeable vehicle jolt and potential hazard.</p>
+          </div>
+        </div>
+
+        <div class="guide-divider"></div>
+
+        <div class="guide-item">
+          <div class="guide-dot-col">
+            <span class="guide-color-dot dot-moderate"></span>
+          </div>
+          <div class="guide-text-col">
+            <div class="guide-tier-header">
+              <span class="guide-title text-moderate">Moderate Bump</span>
+              <span class="guide-badge badge-moderate">VIBRATION</span>
+            </div>
+            <p class="guide-desc">Moderate road vibration (1.8 G – 2.2 G). Uneven pavement or minor bump.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Appearance & Theme -->
+    <div class="settings-section">
+      <div class="section-label">APPEARANCE</div>
+      <div class="settings-card">
+        <div class="setting-row">
+          <div class="row-label-group">
+            <span class="row-title">Dark Theme Mode</span>
+            <span class="row-subtitle">Choose your preferred dark palette</span>
+          </div>
+          <div class="theme-pill-selector">
+            <button
+              class="theme-pill-btn"
+              [class.active]="selectedTheme === 'midnight'"
+              (click)="onThemeChange('midnight')"
+            >
+              Midnight
+            </button>
+            <button
+              class="theme-pill-btn"
+              [class.active]="selectedTheme === 'amoled'"
+              (click)="onThemeChange('amoled')"
+            >
+              OLED Black
+            </button>
+          </div>
+        </div>
+
+        <div class="guide-divider"></div>
+
+        <div class="setting-row">
+          <div class="row-label-group">
+            <span class="row-title">Map Dark Vector Style</span>
+            <span class="row-subtitle">Automotive night navigation layout</span>
+          </div>
+          <span class="setting-badge-active">Polestar Dark</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Telemetry & Sensing Controls -->
+    <div class="settings-section">
+      <div class="section-label">RIDE & SENSING</div>
+      <div class="settings-card">
+        <div class="setting-row">
+          <div class="row-label-group">
+            <span class="row-title">Keep Screen Awake</span>
+            <span class="row-subtitle">Prevent display sleep during navigation</span>
+          </div>
+          <ion-toggle
+            color="primary"
+            [(ngModel)]="keepScreenAwake"
+            (ionChange)="onWakeLockToggle()"
+          ></ion-toggle>
+        </div>
+
+        <div class="guide-divider"></div>
+
+        <div class="setting-row">
+          <div class="row-label-group">
+            <span class="row-title">Haptic Spike Alerts</span>
+            <span class="row-subtitle">Vibrate device on severe impact detection</span>
+          </div>
+          <ion-toggle
+            color="primary"
+            [(ngModel)]="hapticFeedback"
+            (ionChange)="onHapticToggle()"
+          ></ion-toggle>
+        </div>
+
+        <div class="guide-divider"></div>
+
+        <div class="setting-row">
+          <div class="row-label-group">
+            <span class="row-title">Background Location Service</span>
+            <span class="row-subtitle">Android foreground service & iOS background mode</span>
+          </div>
+          <span class="setting-status-active">
+            <span class="active-dot"></span> Enabled
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Data Management & Export -->
+    <div class="settings-section">
+      <div class="section-label">DATA & BACKUP</div>
+      <div class="settings-card">
+        <div class="setting-clickable-row" (click)="exportTelemetryJson()">
+          <div class="row-label-group">
+            <span class="row-title">Export Telemetry Data</span>
+            <span class="row-subtitle">Download raw road impact records as JSON</span>
+          </div>
+          <ion-icon name="download-outline" class="row-action-icon"></ion-icon>
+        </div>
+
+        <div class="guide-divider"></div>
+
+        <div class="setting-clickable-row" (click)="clearAllData()">
+          <div class="row-label-group">
+            <span class="row-title text-alarming">Reset Telemetry Dataset</span>
+            <span class="row-subtitle">Restore default Greater Noida sample route</span>
+          </div>
+          <ion-icon name="refresh-outline" class="row-action-icon text-alarming"></ion-icon>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 5: Policies & About -->
+    <div class="settings-section">
+      <div class="section-label">ABOUT & PRIVACY</div>
+      <div class="settings-card">
+        <div class="setting-clickable-row" (click)="openPolicy('privacy')">
+          <div class="row-label-group">
+            <span class="row-title">Privacy & Location Transparency</span>
+            <span class="row-subtitle">On-device telemetry processing</span>
+          </div>
+          <ion-icon name="chevron-forward" class="row-arrow-icon"></ion-icon>
+        </div>
+
+        <div class="guide-divider"></div>
+
+        <div class="setting-clickable-row" (click)="openPolicy('terms')">
+          <div class="row-label-group">
+            <span class="row-title">Civic Terms & Usage</span>
+            <span class="row-subtitle">Public road hazard crowdsourcing</span>
+          </div>
+          <ion-icon name="chevron-forward" class="row-arrow-icon"></ion-icon>
+        </div>
+
+        <div class="guide-divider"></div>
+
+        <div class="setting-row">
+          <div class="row-label-group">
+            <span class="row-title">BumpAlert Version</span>
+            <span class="row-subtitle">Build {{ buildNumber }}</span>
+          </div>
+          <span class="version-tag">v{{ appVersion }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</ion-content>

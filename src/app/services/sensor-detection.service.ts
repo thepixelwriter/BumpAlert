@@ -21,6 +21,9 @@ const MODERATE_G_THRESHOLD = 1.8;
 /** At/above this delta the bump is classified as severe (typical for Indian road potholes). */
 const SEVERE_G_THRESHOLD = 2.2;
 
+/** At/above this delta the impact is classified as alarming, overriding severe/moderate. */
+const ALARMING_G_THRESHOLD = 4.0;
+
 /** Minimum time between two accepted detections, to avoid duplicate triggers from one bump. */
 const DETECTION_COOLDOWN_MS = 2000;
 
@@ -277,6 +280,9 @@ export class SensorDetectionService implements OnDestroy {
   /** Converts a raw Z-axis reading (m/s^2) into a G-force delta and classifies severity. */
   private classifySpike(zAcceleration: number): HazardSeverity | null {
     const gForceDelta = this.toGForce(zAcceleration);
+    if (gForceDelta >= ALARMING_G_THRESHOLD) {
+      return 'alarming';
+    }
     if (gForceDelta >= SEVERE_G_THRESHOLD) {
       return 'severe';
     }
