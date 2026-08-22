@@ -2,6 +2,7 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/co
 import { Subject, Subscription, firstValueFrom, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { ToastController } from '@ionic/angular';
+import { Router } from '@angular/router';
 import { SensorDetectionService, LiveAcceleration, LiveLocation, PermissionState } from '../../services/sensor-detection.service';
 import { MapNavigationService } from '../../services/map-navigation.service';
 import { GoogleMapsLoaderService } from '../../services/google-maps-loader.service';
@@ -67,9 +68,12 @@ export class MapPage implements OnInit, OnDestroy {
   private currentLocationMarker?: google.maps.Marker;
   private destinationMarker?: google.maps.Marker;
   private routeLine?: google.maps.Polyline;
+  /** Chronological line inferred from the GPS locations captured with telemetry. */
+  private telemetryPathLine?: google.maps.Polyline;
   private lastKnownPosition: { latitude: number; longitude: number } | null = null;
   private hasCenteredOnCurrentLocation = false;
   private readonly hazardMarkers = new Map<string, google.maps.Marker>();
+  private hazardInfoWindow?: google.maps.InfoWindow;
   private allReports: PotholeReport[] = [];
 
   private readonly toQuery$ = new Subject<string>();
@@ -92,7 +96,10 @@ export class MapPage implements OnInit, OnDestroy {
     private readonly telemetryService: TelemetryService,
     private readonly wakeLock: WakeLockService,
     private readonly toastCtrl: ToastController,
+    private readonly router: Router,
   ) {}
+
+  closeMap(): void { void this.router.navigateByUrl('/tabs/telemetry'); }
 
   async ngOnInit(): Promise<void> {
     await this.initMap();
@@ -121,6 +128,7 @@ export class MapPage implements OnInit, OnDestroy {
     this.reportsSub = this.telemetryService.rawReports$.subscribe((reports) => {
       this.allReports = reports;
       this.syncHazardMarkers(reports);
+      this.syncTelemetryPath(reports);
       this.updateNearestHazard();
     });
 
@@ -192,7 +200,9 @@ export class MapPage implements OnInit, OnDestroy {
     this.positionSub?.unsubscribe();
     this.toSearchSub?.unsubscribe();
     this.permissionSub?.unsubscribe();
-    await this.stopRide();
+    // Sensing belongs to the Live Telemetry experience, not to this optional map.
+    // Leaving the map must never interrupt ongoing telemetry collection.
+    await this.wakeLock.disable();
     await this.mapNavigation.stopTracking();
   }
 
@@ -205,20 +215,10 @@ export class MapPage implements OnInit, OnDestroy {
         // Use one high-contrast theme before and during a trip, so navigation
         // does not visually jump from a light map to a dark map.
         styles: NAVIGATION_MAP_STYLES,
-        // Keep the familiar Google Maps controls available on the map itself.
-        disableDefaultUI: false,
-        zoomControl: true,
-        mapTypeControl: true,
-        streetViewControl: true,
-        fullscreenControl: true,
-        rotateControl: true,
-        scaleControl: true,
-        clickableIcons: true,
+        // Read-only telemetry map: show only detections and their inferred path.
+        disableDefaultUI: true,
+        clickableIcons: false,
         gestureHandling: 'greedy',
-        mapTypeControlOptions: { position: maps.ControlPosition.TOP_RIGHT },
-        zoomControlOptions: { position: maps.ControlPosition.RIGHT_CENTER },
-        streetViewControlOptions: { position: maps.ControlPosition.RIGHT_CENTER },
-        fullscreenControlOptions: { position: maps.ControlPosition.RIGHT_TOP },
       });
     } catch (error) {
       console.error('BumpAlert: map initialization failed', error);
@@ -282,9 +282,8 @@ export class MapPage implements OnInit, OnDestroy {
       this.currentLocationMarker = new google.maps.Marker({
         position,
         map: this.map,
-        icon: this.createVehicleIcon(),
         zIndex: 100,
-        title: 'Your vehicle',
+        title: 'Current location',
       });
       this.map.setCenter(position);
       this.map.setZoom(DEFAULT_ZOOM);
@@ -297,23 +296,6 @@ export class MapPage implements OnInit, OnDestroy {
         this.hasCenteredOnCurrentLocation = true;
       }
     }
-  }
-
-  /** A visible vehicle marker gives the rider a clear orientation while driving. */
-  private createVehicleIcon(): google.maps.Icon {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-      <circle cx="24" cy="24" r="22" fill="#08c7ef" fill-opacity=".28"/>
-      <path d="M15 22.5 18.5 13h11L33 22.5v12a2 2 0 0 1-2 2h-2v-3H19v3h-2a2 2 0 0 1-2-2v-12Z" fill="#166a8b" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M19.3 15.5h9.4l2 6H17.3l2-6Z" fill="#9be8ff"/>
-      <circle cx="19" cy="27" r="2.2" fill="#f8fbff"/><circle cx="29" cy="27" r="2.2" fill="#f8fbff"/>
-      <path d="M20 34h8" stroke="#ff5a5f" stroke-width="2.5" stroke-linecap="round"/>
-    </svg>`;
-
-    return {
-      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-      scaledSize: new google.maps.Size(48, 48),
-      anchor: new google.maps.Point(24, 24),
-    };
   }
 
   private syncHazardMarkers(reports: PotholeReport[]): void {
@@ -332,14 +314,14 @@ export class MapPage implements OnInit, OnDestroy {
     for (const report of reports) {
       if (this.hazardMarkers.has(report.id)) continue;
 
-      let color = '#38bdf8';
-      let scale = 10;
+      let color = '#fbbf24';
+      let scale = 9;
       if (report.severity === 'alarming') {
         color = '#f87171';
-        scale = 14;
+        scale = 13;
       } else if (report.severity === 'severe') {
         color = '#fb923c';
-        scale = 12;
+        scale = 11;
       }
 
       const marker = new google.maps.Marker({
@@ -349,14 +331,52 @@ export class MapPage implements OnInit, OnDestroy {
           path: google.maps.SymbolPath.CIRCLE,
           scale,
           fillColor: color,
-          fillOpacity: 0.95,
-          strokeColor: '#ffffff',
-          strokeWeight: 3,
+          fillOpacity: 0.82,
+          strokeColor: '#24323a',
+          strokeOpacity: 0.65,
+          strokeWeight: 1.5,
         },
         title: `${report.severity.toUpperCase()} Bump: ${report.gForce.toFixed(2)}G`,
       });
+      marker.addListener('click', () => {
+        if (!this.hazardInfoWindow) this.hazardInfoWindow = new google.maps.InfoWindow();
+        this.hazardInfoWindow.setContent(`<strong>${report.severity.toUpperCase()} anomaly</strong><br>${report.gForce.toFixed(2)} G · ${new Date(report.timestamp).toLocaleString()}<br>${report.latitude.toFixed(6)}, ${report.longitude.toFixed(6)}`);
+        this.hazardInfoWindow.open(this.map, marker);
+      });
 
       this.hazardMarkers.set(report.id, marker);
+    }
+  }
+
+  /**
+   * A detection has one GPS point, so this is an inferred travel path rather
+   * than turn-by-turn navigation. It remains available without Directions API.
+   */
+  private syncTelemetryPath(reports: PotholeReport[]): void {
+    if (!this.map) return;
+    const path = [...reports]
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .map((report) => ({ lat: report.latitude, lng: report.longitude }));
+
+    this.telemetryPathLine?.setMap(null);
+    this.telemetryPathLine = undefined;
+    if (path.length < 2) return;
+
+    this.telemetryPathLine = new google.maps.Polyline({
+      path,
+      map: this.map,
+      strokeColor: '#38bdf8',
+      strokeOpacity: 0.82,
+      strokeWeight: 4,
+      geodesic: true,
+      zIndex: 1,
+    });
+
+    // Show the complete recorded area on first opening the optional map.
+    if (!this.hasCenteredOnCurrentLocation) {
+      const bounds = new google.maps.LatLngBounds();
+      path.forEach((point) => bounds.extend(point));
+      this.map.fitBounds(bounds, 48);
     }
   }
 

@@ -14,7 +14,32 @@
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
 
-@import "@ionic/angular/css/palettes/dark.always.css";
+@import "@ionic/angular/css/palettes/dark.class.css";
+
+/* Ionic's dark palette is opt-in; these tokens keep the app readable in both modes. */
+body.day-mode {
+  --ion-background-color: #f4f7f8;
+  --ion-background-color-rgb: 244, 247, 248;
+  --ion-text-color: #24323a;
+  --ion-text-color-rgb: 36, 50, 58;
+  --ion-color-step-50: #f8fafb;
+  --ion-color-step-100: #eef3f5;
+  --ion-color-step-150: #e7eef0;
+  --ion-color-step-200: #dce7ea;
+  --ion-color-step-300: #c5d4d9;
+  --ion-color-step-400: #60727b;
+  --ion-color-step-500: #71858e;
+  --ion-color-step-600: #84979f;
+  --ion-color-step-700: #9aabb1;
+  --ion-color-step-800: #d3dfe2;
+  --ion-color-step-900: #edf2f3;
+  --ion-toolbar-background: #f4f7f8;
+  --ion-toolbar-color: #24323a;
+  --app-glass-bg: rgba(244, 247, 248, 0.88);
+  --app-surface-1: #ffffff;
+  --app-surface-2: #eef3f5;
+  --app-surface-hover: #e7eef0;
+}
 
 /* Universal Typography & Anti-Aliasing */
 html, body {
@@ -80,6 +105,11 @@ ion-button {
 ion-toolbar {
   --border-width: 0 0 1px 0;
   --border-color: rgba(var(--ion-text-color-rgb), 0.06);
+}
+
+body.day-mode ion-toolbar,
+body.day-mode ion-tab-bar {
+  --background: rgba(244, 247, 248, 0.94);
 }
 
 /* Keyboard and assistive-technology users need the same clear affordances as touch users. */

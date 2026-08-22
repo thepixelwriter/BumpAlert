@@ -13,8 +13,23 @@
   gap: 24px;
 }
 
+@media (min-width: 760px) {
+  .settings-wrapper {
+    max-width: 980px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 22px;
+  }
+
+  .settings-section:first-child,
+  .settings-section:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+
 .glass-toolbar {
-  --background: rgba(14, 19, 27, 0.9);
+  --background: var(--app-glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(var(--ion-text-color-rgb), 0.06);
@@ -97,7 +112,7 @@
         font-size: 0.62rem;
         font-weight: 700;
         padding: 2px 6px;
-        border-radius: 4px;
+        border-radius: var(--app-element-radius);
         letter-spacing: 0.03em;
 
         &.badge-alarming {
@@ -195,7 +210,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     padding: 4px 10px;
-    border-radius: 6px;
+    border-radius: var(--app-element-radius);
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
 
@@ -238,7 +253,7 @@
   color: var(--ion-color-step-400);
   background: rgba(var(--ion-text-color-rgb), 0.05);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--app-element-radius);
 }
 
 .sensor-readout-badge {

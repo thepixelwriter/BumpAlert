@@ -11,7 +11,7 @@
 }
 
 .glass-toolbar {
-  --background: rgba(14, 19, 27, 0.9);
+  --background: var(--app-glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(var(--ion-text-color-rgb), 0.06);
@@ -21,6 +21,16 @@
     font-weight: 700;
     letter-spacing: -0.01em;
     color: var(--ion-text-color);
+    position: static;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    text-align: left;
+    margin-left: 16px;
+    padding: 0;
+    span { display: block; }
+    small { display: block; margin-top: 1px; color: #38bdf8; font-size: .67rem; font-weight: 600; }
   }
 
   .header-live-tag {
@@ -71,6 +81,108 @@
 .summary-section {
   margin-bottom: 24px;
 }
+
+.telemetry-actions { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin: 4px 0 18px; }
+.telemetry-actions h1 { margin: 0 0 4px; font-size: 1.55rem; text-align: left; }
+.telemetry-actions p { margin: 0; color: var(--ion-color-step-400); font-size: .8rem; }
+.telemetry-actions .eyebrow { color: #38bdf8; font-size: .65rem; font-weight: 700; letter-spacing: .09em; }
+.show-map-button { --padding-start: 10px; --padding-end: 10px; height: 32px; margin: 0 0 2px; font-size: .78rem; }
+.live-impact-card { min-height: 146px; display: grid; grid-template-columns: minmax(100px, .8fr) minmax(170px, 1.3fr) minmax(140px, 1fr) minmax(170px, 1.2fr); grid-template-areas: 'impact acceleration gyroscope location' 'waveform waveform waveform waveform'; column-gap: 20px; row-gap: 12px; align-items: center; padding: 14px 16px; margin-bottom: 14px; border: 1px solid rgba(56, 189, 248, .2); border-radius: var(--app-card-radius); background: linear-gradient(115deg, rgba(14, 39, 53, .96), var(--app-surface-1)); box-shadow: 0 4px 20px rgba(0, 0, 0, .16); }
+.impact-readout { grid-area: impact; min-width: 0; display: grid; gap: 3px; align-content: center; font-variant-numeric: tabular-nums; }
+.impact-readout em { color: #94a3b8; font-size: .6rem; font-style: normal; white-space: nowrap; }
+.impact-readout .impact-value { justify-content: flex-start; }
+.impact-readout .impact-value > span { text-align: start; }
+.impact-readout .telemetry-label { color: #7dd3fc; }
+.impact-value { display: inline-flex; align-items: baseline; white-space: nowrap; }
+.impact-value > span { min-inline-size: 5ch; color: #f3fbfd; font-size: 1.45rem; line-height: 1.1; font-weight: 700; }
+.impact-value small { margin-left: 3px; color: #94a3b8; font-size: .65rem; }
+.accelerometer-readout, .gyro-readout { min-inline-size: 0; align-content: center; font-variant-numeric: tabular-nums; }
+.accelerometer-readout { grid-area: acceleration; display: grid; gap: 6px; }
+.telemetry-label { color: #94a3b8; font-size: .64rem; text-transform: uppercase; letter-spacing: .06em; }
+.telemetry-label small { color: #64748b; font-size: inherit; letter-spacing: 0; text-transform: none; }
+.axis-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; min-inline-size: 0; }
+.axis-values div { display: grid; gap: 2px; min-width: 0; padding-left: 7px; border-left: 2px solid #38bdf8; }
+.axis-values b { color: #7dd3fc; font-size: .6rem; }
+.axis-values output { min-width: 0; color: #f3fbfd; font-size: .69rem; font-weight: 600; white-space: nowrap; }
+.gyro-readout { grid-area: gyroscope; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; min-height: 108px; }
+.gyro-axis { display: grid; grid-template-columns: 1.25ch minmax(7.5ch, 1fr) 3ch; align-items: baseline; gap: 4px; min-inline-size: 0; color: #cbd5e1; font-size: .67rem; font-weight: 600; }
+.gyro-axis b { color: #7dd3fc; }
+.gyro-axis output { display: block; min-inline-size: 7.5ch; max-inline-size: 100%; color: #f3fbfd; text-align: end; overflow-wrap: anywhere; }
+.gyro-axis small { color: #94a3b8; font-size: inherit; white-space: nowrap; }
+.sensor-state { color: #64748b; font-size: .6rem; line-height: 1.2; white-space: nowrap; }
+.sensor-state-live { color: #34d399; }
+.location-readout { grid-area: location; min-width: 0; min-height: 62px; display: grid; gap: 6px; align-content: center; font-variant-numeric: tabular-nums; }
+.location-heading, .waveform-footer { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
+.location-values { display: grid; grid-template-columns: 1fr 1fr; align-items: baseline; gap: 3px 8px; color: #f3fbfd; font-size: .68rem; font-weight: 600; }
+.location-values output { min-width: 0; white-space: nowrap; }
+.location-values small { grid-column: 1 / -1; color: #94a3b8; font-size: .61rem; font-weight: 500; }
+.location-placeholder { color: #64748b; }
+.live-waveform { grid-area: waveform; min-width: 0; min-height: 62px; display: grid; gap: 6px; align-content: center; }
+.waveform-bars { height: 38px; display: grid; grid-template-columns: repeat(28, minmax(2px, 1fr)); align-items: center; gap: 2px; overflow: hidden; }
+.waveform-bars span { display: block; height: 100%; min-height: 2px; transform-origin: center; border-radius: 2px; background: #38bdf8; opacity: .72; transition: transform 350ms cubic-bezier(.2,.8,.2,1), background-color 250ms ease; will-change: transform; }
+.waveform-bars span:last-child { background: #fbbf24; opacity: 1; }
+.waveform-footer span, .waveform-footer strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.waveform-footer span { color: #94a3b8; font-size: .61rem; text-transform: uppercase; letter-spacing: .06em; }
+.waveform-footer strong { color: #cbd5e1; font-size: .62rem; font-weight: 600; }
+
+/* Day mode keeps the reference's quiet canvas and readable slate sensor panel. */
+:host-context(body.day-mode) .glass-toolbar {
+  --background: #f3f7f7;
+  --color: #24323a;
+  border-bottom-color: rgba(36, 50, 58, .08);
+}
+:host-context(body.day-mode) .glass-toolbar .app-header-title { color: #24323a; }
+:host-context(body.day-mode) .review-canvas-content { --background: #f3f7f7; }
+:host-context(body.day-mode) .live-impact-card {
+  border-color: rgba(54, 76, 87, .24);
+  background: linear-gradient(112deg, #3d5663 0%, #78909a 52%, #dbe3e5 100%);
+  box-shadow: 0 6px 18px rgba(66, 84, 91, .16);
+}
+:host-context(body.day-mode) .telemetry-label { color: #d9e7e9; }
+:host-context(body.day-mode) .telemetry-label small { color: #d1e0e3; }
+:host-context(body.day-mode) .impact-readout .telemetry-label { color: #bde5ed; }
+:host-context(body.day-mode) .impact-readout em,
+:host-context(body.day-mode) .sensor-state,
+:host-context(body.day-mode) .gyro-axis small,
+:host-context(body.day-mode) .location-values small,
+:host-context(body.day-mode) .waveform-footer span { color: #d2dee0; }
+:host-context(body.day-mode) .impact-value > span,
+:host-context(body.day-mode) .axis-values output,
+:host-context(body.day-mode) .gyro-axis output { color: #f5fafb; }
+:host-context(body.day-mode) .axis-values b,
+:host-context(body.day-mode) .gyro-axis b { color: #b9eaf2; }
+:host-context(body.day-mode) .location-values { color: #f5fafb; }
+:host-context(body.day-mode) .location-heading .sensor-state-live { color: #b8edcf; }
+:host-context(body.day-mode) .waveform-footer strong { color: #e8f1f2; }
+:host-context(body.day-mode) .metric-card,
+:host-context(body.day-mode) .empty-state-canvas { box-shadow: 0 5px 16px rgba(58, 76, 82, .1); }
+
+.export-actions { display: flex; gap: 6px; padding: 4px; border-radius: 10px; background: rgba(56, 189, 248, .07); }
+.export-actions ion-button { --color: #7dd3fc; --background: rgba(56, 189, 248, .08); --padding-start: 9px; --padding-end: 9px; height: 30px; margin: 0; font-size: .72rem; }
+.share-card-content { --background: #0e131b; }
+.share-map-preview { width: 100%; height: 240px; object-fit: cover; background: #17202c; }
+.share-card-details { padding: 22px; color: #e2e8f0; }
+.share-card-details h2 { margin: 14px 0 6px; }
+.share-card-details p { color: #94a3b8; }
+.share-card-details .coords { font-family: ui-monospace, monospace; }
+@media (max-width: 680px) { .live-impact-card { min-height: 196px; grid-template-columns: minmax(92px, .8fr) minmax(150px, 1.2fr); grid-template-areas: 'impact acceleration' 'gyroscope location' 'waveform waveform'; column-gap: 16px; row-gap: 10px; } }
+@media (max-width: 430px) { .telemetry-actions { flex-direction: row; align-items: center; } .live-impact-card { min-height: 250px; grid-template-columns: 1fr 1fr; column-gap: 12px; padding: 12px; } }
+@media (max-width: 340px) { .live-impact-card { min-height: 344px; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'impact' 'acceleration' 'gyroscope' 'location' 'waveform'; } }
+
+/* Respect Ionic's platform mode: lighter grouping on iOS, crisp surfaces on Material Android. */
+:host-context(.ios) .glass-toolbar { --background: rgba(14, 19, 27, .84); }
+:host-context(.ios) .canvas-wrapper { padding-left: 12px; padding-right: 12px; }
+:host-context(.ios) .live-impact-card, :host-context(.ios) .metric-card, :host-context(.ios) .cluster-summary-card { border-radius: var(--app-card-radius); }
+:host-context(.ios) .show-map-button { --border-radius: var(--app-element-radius); }
+:host-context(.md) .live-impact-card, :host-context(.md) .metric-card, :host-context(.md) .cluster-summary-card { border-radius: var(--app-card-radius); box-shadow: 0 2px 8px rgba(0, 0, 0, .18); }
+:host-context(.md) .glass-toolbar { --background: #0e131b; }
+
+.motion-permission-prompt { position: fixed; z-index: 100; left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 11px; padding: 12px; border: 1px solid rgba(56, 189, 248, .28); border-radius: var(--app-card-radius); background: rgba(18, 35, 49, .98); box-shadow: 0 12px 30px rgba(0,0,0,.32); }
+.motion-permission-prompt > ion-icon { color: #38bdf8; font-size: 24px; }
+.motion-permission-prompt div { flex: 1; display: grid; gap: 2px; }
+.motion-permission-prompt strong { font-size: .82rem; }
+.motion-permission-prompt span { color: #94a3b8; font-size: .7rem; }
+.motion-permission-prompt ion-button { margin: 0; --padding-start: 10px; --padding-end: 10px; }
 
 .metrics-grid {
   display: grid;
@@ -599,6 +711,7 @@
 
   .bottom-reset-btn {
     --color: var(--ion-color-step-400);
+    --background: rgba(148, 163, 184, .10);
     --border-radius: var(--app-element-radius);
     font-size: 0.82rem;
     font-weight: 500;

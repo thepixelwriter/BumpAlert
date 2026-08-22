@@ -63,23 +63,23 @@
       <div class="settings-card">
         <div class="setting-row">
           <div class="row-label-group">
-            <span class="row-title">Dark Theme Mode</span>
-            <span class="row-subtitle">Choose your preferred dark palette</span>
+            <span class="row-title">Display Theme</span>
+            <span class="row-subtitle">Choose a calm day or night palette</span>
           </div>
           <div class="theme-pill-selector">
             <button
               class="theme-pill-btn"
-              [class.active]="selectedTheme === 'midnight'"
-              (click)="onThemeChange('midnight')"
+              [class.active]="selectedTheme === 'day'"
+              (click)="onThemeChange('day')"
             >
-              Midnight
+              Day
             </button>
             <button
               class="theme-pill-btn"
-              [class.active]="selectedTheme === 'amoled'"
-              (click)="onThemeChange('amoled')"
+              [class.active]="selectedTheme === 'night'"
+              (click)="onThemeChange('night')"
             >
-              OLED Black
+              Night
             </button>
           </div>
         </div>

@@ -13,7 +13,7 @@ import { SensorDetectionService, LiveAcceleration, PermissionState } from '../..
 })
 export class SettingsPage implements OnInit, OnDestroy {
   // Appearance Preferences
-  selectedTheme = 'midnight'; // 'midnight' | 'amoled'
+  selectedTheme = 'night'; // 'day' | 'night'
   mapStyle = 'automotive'; // 'automotive' | 'satellite' | 'terrain'
 
   // Sensing & Telemetry Settings
@@ -51,6 +51,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   ngOnInit(): void {
     const savedTheme = localStorage.getItem('bumpalert_theme');
     if (savedTheme) this.selectedTheme = savedTheme;
+    this.onThemeChange(this.selectedTheme);
 
     const savedHaptic = localStorage.getItem('bumpalert_haptic');
     if (savedHaptic !== null) this.hapticFeedback = savedHaptic === 'true';
@@ -82,7 +83,8 @@ export class SettingsPage implements OnInit, OnDestroy {
   onThemeChange(theme: string): void {
     this.selectedTheme = theme;
     localStorage.setItem('bumpalert_theme', theme);
-    document.body.classList.toggle('amoled-mode', theme === 'amoled');
+    document.body.classList.toggle('day-mode', theme === 'day');
+    document.body.classList.toggle('dark', theme === 'night');
   }
 
   onWakeLockToggle(): void {

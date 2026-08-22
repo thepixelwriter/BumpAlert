@@ -1,6 +1,6 @@
 <ion-header class="ion-no-border">
   <ion-toolbar class="glass-toolbar">
-    <ion-title class="app-header-title">Telemetry Review</ion-title>
+    <div class="app-header-title"><span>BumpAlert</span><small>Report and make roads better</small></div>
     <ion-buttons slot="end">
       <div class="header-live-tag">
         <span class="live-pulse-dot"></span>
@@ -27,6 +27,45 @@
 
     <!-- Metrics Summary Dashboard Canvas (No >= or <= symbols) -->
     <section class="summary-section">
+      <div class="telemetry-actions">
+        <div><h1>Live Telemetry</h1><p>Live road anomaly detection</p></div>
+        <ion-button size="small" fill="outline" class="show-map-button" (click)="showOnMap()"><ion-icon slot="start" name="map-outline"></ion-icon>Map</ion-button>
+      </div>
+      <section class="live-impact-card" aria-label="Live impact detection graph">
+        <div class="impact-readout">
+          <span class="telemetry-label">Impact</span>
+          <strong class="impact-value"><span>{{ displayImpactG | number: '1.2-2' }}</span><small>G</small></strong>
+          <em>{{ displayImpactG > 0 ? 'Anomaly detected' : 'No anomaly' }}</em>
+        </div>
+        <div class="accelerometer-readout">
+          <span class="telemetry-label">Accelerometer <small>m/s<sup>2</sup></small></span>
+          <div class="axis-values" aria-label="Live accelerometer axes">
+            <div><b>X</b><output>{{ acceleration.x | number: '1.2-2' }}</output></div>
+            <div><b>Y</b><output>{{ acceleration.y | number: '1.2-2' }}</output></div>
+            <div><b>Z</b><output>{{ acceleration.z | number: '1.2-2' }}</output></div>
+          </div>
+        </div>
+        <div class="gyro-readout">
+          <span class="telemetry-label">Gyroscope</span>
+          <div class="gyro-axis"><b>&alpha;</b><output>{{ gyroscope?.alpha ?? 0 | number: '1.2-2' }}</output><small>&deg;/s</small></div>
+          <div class="gyro-axis"><b>&beta;</b><output>{{ gyroscope?.beta ?? 0 | number: '1.2-2' }}</output><small>&deg;/s</small></div>
+          <div class="gyro-axis"><b>&gamma;</b><output>{{ gyroscope?.gamma ?? 0 | number: '1.2-2' }}</output><small>&deg;/s</small></div>
+          <span class="sensor-state" [class.sensor-state-live]="!!gyroscope">{{ gyroscope ? 'Live hardware stream' : 'Waiting for hardware' }}</span>
+        </div>
+        <div class="location-readout">
+          <div class="location-heading"><span class="telemetry-label">GPS location</span><span class="sensor-state" [class.sensor-state-live]="!!liveLocation">{{ locationStatus }}</span></div>
+          <div class="location-values" *ngIf="liveLocation as location; else noLocation">
+            <output>{{ location.latitude | number: '1.5-5' }}&deg; N</output>
+            <output>{{ location.longitude | number: '1.5-5' }}&deg; E</output>
+            <small>&plusmn;{{ location.accuracy ?? 0 | number: '1.0-0' }} m</small>
+          </div>
+          <ng-template #noLocation><div class="location-values location-placeholder"><output>--.-----&deg; N</output><output>--.-----&deg; E</output><small>Waiting for GPS</small></div></ng-template>
+        </div>
+        <div class="live-waveform" aria-label="Live impact history">
+          <div class="waveform-bars" aria-hidden="true"><span *ngFor="let sample of liveSamples" [style.transform]="'scaleY(' + (graphHeight(sample) / 100) + ')'" ></span></div>
+          <div class="waveform-footer"><span>Impact history</span><strong>{{ impactStatus }}</strong></div>
+        </div>
+      </section>
       <div class="metrics-grid">
         <!-- Metric 1: Total -->
         <div class="metric-card">
@@ -193,9 +232,7 @@
 
               <!-- Right: Actions Flexbox -->
               <div class="entry-actions-col">
-                <!-- Share Grievance for Severe & Alarming Impacts -->
                 <ion-button
-                  *ngIf="report.severity === 'alarming' || report.severity === 'severe'"
                   size="small"
                   fill="outline"
                   class="grievance-share-btn"
@@ -237,6 +274,10 @@
 
     <!-- BOTTOM ACTION AREA: Clear current session and report current detections -->
     <div class="bottom-action-panel">
+      <div class="export-actions" *ngIf="rawReports.length > 0">
+        <ion-button fill="clear" (click)="exportRecords('csv')"><ion-icon slot="start" name="download-outline"></ion-icon>CSV</ion-button>
+        <ion-button fill="clear" (click)="exportRecords('json')"><ion-icon slot="start" name="code-slash-outline"></ion-icon>JSON</ion-button>
+      </div>
       <ion-button
         *ngIf="rawReports.length > 0"
         fill="clear"
@@ -261,3 +302,25 @@
   </div>
 
 </ion-content>
+
+<div class="motion-permission-prompt" *ngIf="needsMotionPermission">
+  <ion-icon name="phone-portrait-outline"></ion-icon>
+  <div><strong>Enable motion sensing</strong><span>Allow motion access to detect road impacts.</span></div>
+  <ion-button size="small" (click)="enableMotionSensing()">Enable</ion-button>
+</div>
+
+<ion-modal [isOpen]="!!selectedShareReport" (didDismiss)="closeShareCard()" class="share-modal">
+  <ng-template>
+    <ion-header class="ion-no-border"><ion-toolbar><ion-title>Share detection</ion-title><ion-buttons slot="end"><ion-button (click)="closeShareCard()">Close</ion-button></ion-buttons></ion-toolbar></ion-header>
+    <ion-content class="share-card-content" *ngIf="selectedShareReport as report">
+      <img class="share-map-preview" [src]="sharePreviewUrl" alt="Satellite preview of the detected location" />
+      <div class="share-card-details">
+        <span class="entry-tier-badge" [ngClass]="'badge-' + report.severity">{{ report.severity | uppercase }} ANOMALY</span>
+        <h2>{{ report.gForce | number: '1.2-2' }} G impact</h2>
+        <p>{{ report.timestamp | date: 'medium' }}</p>
+        <p class="coords">{{ report.latitude | number: '1.6-6' }}, {{ report.longitude | number: '1.6-6' }}</p>
+        <ion-button expand="block" (click)="continueShare()" [disabled]="isSharing"><ion-spinner *ngIf="isSharing"></ion-spinner><span *ngIf="!isSharing">Continue to share</span></ion-button>
+      </div>
+    </ion-content>
+  </ng-template>
+</ion-modal>
