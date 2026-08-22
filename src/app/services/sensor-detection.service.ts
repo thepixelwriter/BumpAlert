@@ -30,6 +30,13 @@ export interface LiveAcceleration {
   z: number;
 }
 
+/** Angular velocity around the device axes, in degrees per second. */
+export interface LiveGyroscope {
+  alpha: number;
+  beta: number;
+  gamma: number;
+}
+
 export interface LiveLocation {
   latitude: number;
   longitude: number;
@@ -40,7 +47,9 @@ export interface LiveLocation {
   providedIn: 'root',
 })
 export class SensorDetectionService implements OnDestroy {
+  private readonly storageKey = 'bumpalert.telemetry-records.v1';
   private motionListener: PluginListenerHandle | null = null;
+  private orientationListener: PluginListenerHandle | null = null;
   private lastDetectionAt = 0;
   private locationWatchId: string | null = null;
 
@@ -60,6 +69,10 @@ export class SensorDetectionService implements OnDestroy {
   /** Emits every raw accelerometer sample's X/Y/Z axes (m/s^2), for a live readout. */
   readonly liveAcceleration$: Observable<LiveAcceleration> = this.liveAccelerationSubject.asObservable();
 
+  private readonly liveGyroscopeSubject = new BehaviorSubject<LiveGyroscope | null>(null);
+  /** Device rotation rate when the browser/device makes gyroscope data available. */
+  readonly liveGyroscope$: Observable<LiveGyroscope | null> = this.liveGyroscopeSubject.asObservable();
+
   private readonly motionPermissionSubject = new BehaviorSubject<PermissionState>('unknown');
   readonly motionPermissionState$: Observable<PermissionState> = this.motionPermissionSubject.asObservable();
 
@@ -73,6 +86,7 @@ export class SensorDetectionService implements OnDestroy {
   private listening = false;
 
   constructor() {
+    this.restoreStoredReports();
     // Bumps captured natively while minimized only surface once the app is foregrounded again.
     void App.addListener('resume', () => void this.drainNativeBackgroundReports());
   }
@@ -98,7 +112,7 @@ export class SensorDetectionService implements OnDestroy {
       if (!newReports.length) {
         return;
       }
-      this.pendingReportsSubject.next([...this.pendingReportsSubject.value, ...newReports]);
+      this.setReports([...this.pendingReportsSubject.value, ...newReports]);
       this.potholeDetectedSubject.next(newReports[newReports.length - 1]);
     } catch (error) {
       console.warn('BumpAlert: unable to drain background-detected reports', error);
@@ -111,6 +125,18 @@ export class SensorDetectionService implements OnDestroy {
     }
     this.listening = true;
     this.motionListener = await Motion.addListener('accel', (event) => this.handleAccelEvent(event));
+    try {
+      this.orientationListener = await Motion.addListener('orientation', (event) => {
+        this.liveGyroscopeSubject.next({
+          alpha: Math.round((event.alpha ?? 0) * 100) / 100,
+          beta: Math.round((event.beta ?? 0) * 100) / 100,
+          gamma: Math.round((event.gamma ?? 0) * 100) / 100,
+        });
+      });
+    } catch (error) {
+      // Gyroscope support varies by device/browser; accelerometer sensing continues.
+      console.info('BumpAlert: gyroscope telemetry is unavailable', error);
+    }
     if (!this.needsMotionPermissionPrompt()) {
       this.motionPermissionSubject.next('not-required');
     }
@@ -151,6 +177,8 @@ export class SensorDetectionService implements OnDestroy {
     this.listening = false;
     await this.motionListener?.remove();
     this.motionListener = null;
+    await this.orientationListener?.remove();
+    this.orientationListener = null;
 
     if (this.isBackgroundDetectionSupported()) {
       try {
@@ -319,7 +347,7 @@ export class SensorDetectionService implements OnDestroy {
   }
 
   private addPendingReport(report: PotholeReport): void {
-    this.pendingReportsSubject.next([...this.pendingReportsSubject.value, report]);
+    this.setReports([...this.pendingReportsSubject.value, report]);
   }
 
   confirmReport(id: string): void {
@@ -327,24 +355,36 @@ export class SensorDetectionService implements OnDestroy {
   }
 
   dismissReport(id: string): void {
-    this.pendingReportsSubject.next(this.pendingReportsSubject.value.filter((r) => r.id !== id));
+    this.setReports(this.pendingReportsSubject.value.filter((r) => r.id !== id));
   }
 
   markSubmitted(ids: string[]): void {
     const idSet = new Set(ids);
-    this.pendingReportsSubject.next(
+    this.setReports(
       this.pendingReportsSubject.value.map((r) => (idSet.has(r.id) ? { ...r, status: 'submitted' } : r)),
     );
   }
 
   clearAll(): void {
-    this.pendingReportsSubject.next([]);
+    this.setReports([]);
   }
 
   private updateReportStatus(id: string, status: PotholeReport['status']): void {
-    this.pendingReportsSubject.next(
+    this.setReports(
       this.pendingReportsSubject.value.map((r) => (r.id === id ? { ...r, status } : r)),
     );
+  }
+
+  private setReports(reports: PotholeReport[]): void {
+    this.pendingReportsSubject.next(reports);
+    try { localStorage.setItem(this.storageKey, JSON.stringify(reports)); } catch { /* storage can be unavailable */ }
+  }
+
+  private restoreStoredReports(): void {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(this.storageKey) || '[]') as PotholeReport[];
+      if (Array.isArray(parsed)) this.pendingReportsSubject.next(parsed.filter((report) => report?.id && Number.isFinite(report.timestamp)));
+    } catch { /* start clean if a stale record cannot be read */ }
   }
 
   ngOnDestroy(): void {

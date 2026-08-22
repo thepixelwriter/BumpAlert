@@ -20,25 +20,18 @@ const apiKey =
   process.env.GOOGLE_MAPS_KEY ||
   '';
 
-const envProdPath = path.join(__dirname, '../src/environments/environment.prod.ts');
-const envDevPath = path.join(__dirname, '../src/environments/environment.ts');
+const runtimeEnvPath = path.join(__dirname, '../src/environments/environment.runtime.ts');
 
 if (apiKey && apiKey !== 'YOUR_GOOGLE_MAPS_API_KEY') {
-  const prodContent = `export const environment = {
-  production: true,
-  googleMapsApiKey: '${apiKey}',
-};
-`;
-
-  const devContent = `export const environment = {
+  const runtimeContent = `// Generated locally from .env. Do not commit this file.
+export const environment = {
   production: false,
   googleMapsApiKey: '${apiKey}',
 };
 `;
 
-  fs.writeFileSync(envProdPath, prodContent, 'utf8');
-  fs.writeFileSync(envDevPath, devContent, 'utf8');
-  console.log('Successfully injected Google Maps API key into environment files.');
+  fs.writeFileSync(runtimeEnvPath, runtimeContent, 'utf8');
+  console.log('Generated local Maps configuration from .env.');
 } else {
-  console.log('No valid GOOGLE_MAPS_API_KEY found in .env or process.env; keeping default configuration.');
+  console.log('No valid GOOGLE_MAPS_API_KEY found in .env or process.env.');
 }

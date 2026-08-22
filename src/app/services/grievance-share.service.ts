@@ -15,10 +15,10 @@ export class GrievanceShareService {
   /**
    * Generates Google Static Map URL with maximum zoom (zoom=18).
    */
-  getStaticMapUrl(latitude: number, longitude: number, width = 640, height = 400): string {
+  getStaticMapUrl(latitude: number, longitude: number, width = 640, height = 400, mapType = 'roadmap'): string {
     const apiKey = environment.googleMapsApiKey;
     const markerColor = 'red';
-    return `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=18&size=${width}x${height}&scale=2&maptype=roadmap&markers=color:${markerColor}%7C${latitude},${longitude}&key=${apiKey}`;
+    return `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=18&size=${width}x${height}&scale=2&maptype=${mapType}&markers=color:${markerColor}%7C${latitude},${longitude}&key=${apiKey}`;
   }
 
   /**
@@ -255,4 +255,3 @@ export class GrievanceShareService {
     link.click();
   }
 }
-

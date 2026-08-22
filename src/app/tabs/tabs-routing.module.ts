@@ -7,15 +7,16 @@ const routes: Routes = [
     path: 'tabs',
     component: TabsPage,
     children: [
-      // Tab 1: Map (default)
+      // Telemetry is intentionally the primary, default app experience.
       {
-        path: 'map',
-        loadChildren: () => import('../pages/map/map.module').then((m) => m.MapPageModule),
+        path: 'telemetry',
+        loadChildren: () => import('../pages/review/review.module').then((m) => m.ReviewPageModule),
       },
-      // Tab 2: Telemetry Review
+      // Legacy deep link.
       {
         path: 'review',
-        loadChildren: () => import('../pages/review/review.module').then((m) => m.ReviewPageModule),
+        redirectTo: '/tabs/telemetry',
+        pathMatch: 'full',
       },
       // Tab 3: Settings
       {
@@ -25,29 +26,29 @@ const routes: Routes = [
       // Backward-compatible aliases
       {
         path: 'dashboard',
-        redirectTo: '/tabs/map',
+        redirectTo: '/tabs/telemetry',
         pathMatch: 'full',
       },
       {
         path: 'detection',
-        redirectTo: '/tabs/map',
+        redirectTo: '/tabs/telemetry',
         pathMatch: 'full',
       },
       {
         path: 'trip-summary',
-        redirectTo: '/tabs/review',
+        redirectTo: '/tabs/telemetry',
         pathMatch: 'full',
       },
       {
         path: '',
-        redirectTo: '/tabs/map',
+        redirectTo: '/tabs/telemetry',
         pathMatch: 'full',
       },
     ],
   },
   {
     path: '',
-    redirectTo: '/tabs/map',
+    redirectTo: '/tabs/telemetry',
     pathMatch: 'full',
   },
 ];

@@ -1,4 +1,1 @@
-export const environment = {
-  production: false,
-  googleMapsApiKey: 'AIzaSyDQvZnXlPt0P70vrSwb-Mwd036IxummGw8',
-};
+export { environment } from './environment.runtime';

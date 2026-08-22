@@ -16,6 +16,7 @@ log.txt
 .env
 .env.*
 .env.local
+src/environments/environment.runtime.ts
 
 
 

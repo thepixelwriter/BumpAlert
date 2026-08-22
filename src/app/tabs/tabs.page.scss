@@ -21,8 +21,8 @@
 
     /* Compact labels retain enough context without crowding the map. */
     ion-label {
-      display: block;
-      margin-top: 2px;
+      display: none;
+      margin-top: 0;
       font-size: 0.67rem;
       font-weight: 650;
       letter-spacing: 0.01em;

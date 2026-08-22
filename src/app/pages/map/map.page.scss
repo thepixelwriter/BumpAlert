@@ -1177,3 +1177,12 @@
   .map-floating-hud.navigation-hud { bottom: calc(132px + env(safe-area-inset-bottom)); }
   .report-road-button { bottom: calc(264px + env(safe-area-inset-bottom)); }
 }
+.close-map-button {
+  position: fixed;
+  z-index: 300;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 12px;
+  --background: rgba(10, 31, 42, .96);
+  --color: #f3fbfd;
+  --border-radius: 18px;
+}
