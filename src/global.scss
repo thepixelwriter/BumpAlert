@@ -81,3 +81,21 @@ ion-toolbar {
   --border-width: 0 0 1px 0;
   --border-color: rgba(var(--ion-text-color-rgb), 0.06);
 }
+
+/* Keyboard and assistive-technology users need the same clear affordances as touch users. */
+button:focus-visible,
+ion-button:focus-visible,
+ion-toggle:focus-visible,
+ion-item[button]:focus-visible {
+  outline: 2px solid var(--ion-color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

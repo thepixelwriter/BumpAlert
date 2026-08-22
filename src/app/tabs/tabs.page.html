@@ -2,19 +2,22 @@
 
   <ion-tab-bar slot="bottom" class="custom-tab-bar">
 
-    <!-- Tab 1: Map (default, first) — no label -->
+    <!-- Primary navigation destinations -->
     <ion-tab-button tab="map" href="/tabs/map" aria-label="Map & Navigation">
       <ion-icon name="navigate-circle-outline"></ion-icon>
+      <ion-label>Navigate</ion-label>
     </ion-tab-button>
 
-    <!-- Tab 2: Telemetry Review — no label -->
-    <ion-tab-button tab="review" href="/tabs/review" aria-label="Telemetry Review">
+    <!-- Review reported road hazards -->
+    <ion-tab-button tab="review" href="/tabs/review" aria-label="Hazard reports">
       <ion-icon name="layers-outline"></ion-icon>
+      <ion-label>Reports</ion-label>
     </ion-tab-button>
 
-    <!-- Tab 3: Settings — no label -->
+    <!-- App preferences -->
     <ion-tab-button tab="settings" href="/tabs/settings" aria-label="Settings">
       <ion-icon name="settings-outline"></ion-icon>
+      <ion-label>Settings</ion-label>
     </ion-tab-button>
 
   </ion-tab-bar>
