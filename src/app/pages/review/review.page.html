@@ -31,29 +31,25 @@
         <div><h1>Live Telemetry</h1><p>Live road anomaly detection</p></div>
         <ion-button size="small" fill="outline" class="show-map-button" (click)="showOnMap()"><ion-icon slot="start" name="map-outline"></ion-icon>Map</ion-button>
       </div>
-      <section class="live-impact-card" aria-label="Live impact detection graph">
+      <section class="live-impact-card" aria-label="Live motion telemetry graph">
         <div class="impact-readout">
           <span class="telemetry-label">Impact</span>
-          <strong class="impact-value"><span>{{ displayImpactG | number: '1.2-2' }}</span><small>G</small></strong>
-          <em>{{ displayImpactG > 0 ? 'Anomaly detected' : 'No anomaly' }}</em>
+          <strong class="impact-value"><span>{{ stableImpactG | number: '1.2-2' }}</span><small>G</small></strong>
+          <div class="impact-meter" role="meter" aria-label="Current impact force" [attr.aria-valuenow]="stableImpactG" aria-valuemin="0" aria-valuemax="5"><i [style.width.%]="stableImpactG / 5 * 100"></i></div>
+          <em>{{ stableImpactG > 0 ? 'Anomaly detected' : 'Monitoring vibration' }}</em>
         </div>
         <div class="accelerometer-readout">
           <span class="telemetry-label">Accelerometer <small>m/s<sup>2</sup></small></span>
-          <div class="axis-values" aria-label="Live accelerometer axes">
-            <div><b>X</b><output>{{ acceleration.x | number: '1.2-2' }}</output></div>
-            <div><b>Y</b><output>{{ acceleration.y | number: '1.2-2' }}</output></div>
-            <div><b>Z</b><output>{{ acceleration.z | number: '1.2-2' }}</output></div>
-          </div>
+          <div class="axis-values" aria-label="Live accelerometer axes"><output>X: {{ acceleration.x | number: '1.2-2' }}</output><output>Y: {{ acceleration.y | number: '1.2-2' }}</output><output>Z: {{ acceleration.z | number: '1.2-2' }}</output></div>
         </div>
         <div class="gyro-readout">
-          <span class="telemetry-label">Gyroscope</span>
-          <div class="gyro-axis"><b>&alpha;</b><output>{{ gyroscope?.alpha ?? 0 | number: '1.2-2' }}</output><small>&deg;/s</small></div>
-          <div class="gyro-axis"><b>&beta;</b><output>{{ gyroscope?.beta ?? 0 | number: '1.2-2' }}</output><small>&deg;/s</small></div>
-          <div class="gyro-axis"><b>&gamma;</b><output>{{ gyroscope?.gamma ?? 0 | number: '1.2-2' }}</output><small>&deg;/s</small></div>
-          <span class="sensor-state" [class.sensor-state-live]="!!gyroscope">{{ gyroscope ? 'Live hardware stream' : 'Waiting for hardware' }}</span>
+          <span class="telemetry-label">Gyroscope <small>&deg;/s</small></span>
+          <div class="axis-values" aria-label="Live gyroscope axes"><output>&alpha;: {{ gyroscope?.alpha ?? 0 | number: '1.2-2' }}</output><output>&beta;: {{ gyroscope?.beta ?? 0 | number: '1.2-2' }}</output><output>&gamma;: {{ gyroscope?.gamma ?? 0 | number: '1.2-2' }}</output></div>
         </div>
         <div class="location-readout">
-          <div class="location-heading"><span class="telemetry-label">GPS location</span><span class="sensor-state" [class.sensor-state-live]="!!liveLocation">{{ locationStatus }}</span></div>
+          <div class="location-heading"><span class="telemetry-label">{{ liveLocation ? 'Area' : 'GPS location' }}</span><span class="sensor-state" [class.sensor-state-live]="!!liveLocation">{{ locationStatus }}</span></div>
+          <strong class="location-name">{{ locationName }}</strong>
+          <div class="compass-readout"><div class="compass-dial" [style.transform]="'rotate(' + (compassHeading === null ? 0 : -compassHeading) + 'deg)'" aria-hidden="true"><span class="compass-n">N</span><span class="compass-e">E</span><span class="compass-s">S</span><span class="compass-w">W</span><i></i></div><span>Compass</span><strong>{{ compassHeading === null ? '--' : (compassHeading | number: '1.0-0') }}&deg; {{ compassDirection }}</strong></div>
           <div class="location-values" *ngIf="liveLocation as location; else noLocation">
             <output>{{ location.latitude | number: '1.5-5' }}&deg; N</output>
             <output>{{ location.longitude | number: '1.5-5' }}&deg; E</output>
@@ -62,8 +58,15 @@
           <ng-template #noLocation><div class="location-values location-placeholder"><output>--.-----&deg; N</output><output>--.-----&deg; E</output><small>Waiting for GPS</small></div></ng-template>
         </div>
         <div class="live-waveform" aria-label="Live impact history">
-          <div class="waveform-bars" aria-hidden="true"><span *ngFor="let sample of liveSamples" [style.transform]="'scaleY(' + (graphHeight(sample) / 100) + ')'" ></span></div>
-          <div class="waveform-footer"><span>Impact history</span><strong>{{ impactStatus }}</strong></div>
+          <div class="telemetry-graph-legend"><span><i class="legend-impact"></i>Impact</span><span><i class="legend-vibration"></i>Vibration</span><span><i class="legend-acceleration"></i>Accel</span><span><i class="legend-gyro"></i>Gyro</span></div>
+          <svg class="telemetry-graph" viewBox="0 0 640 150" preserveAspectRatio="none" role="img" aria-label="Combined live impact vibration accelerometer gyroscope graph">
+            <path class="graph-grid-line" d="M0 25H640 M0 75H640 M0 125H640"></path>
+            <polyline class="graph-line graph-impact" [attr.points]="graphPoints(impactGraph, 5)"></polyline>
+            <polyline class="graph-line graph-vibration" [attr.points]="graphPoints(vibrationGraph, 5)"></polyline>
+            <polyline class="graph-line graph-acceleration" [attr.points]="graphPoints(accelerationGraph, 20)"></polyline>
+            <polyline class="graph-line graph-gyro" [attr.points]="graphPoints(gyroscopeGraph, 180)"></polyline>
+          </svg>
+          <div class="waveform-footer"><span>Live sensor history</span><strong>{{ impactStatus }} · Compass {{ compassHeading | number: '1.0-0' }}&deg;</strong></div>
         </div>
       </section>
       <div class="metrics-grid">

@@ -45,6 +45,10 @@ public class BumpDetectionService extends Service implements SensorEventListener
     private static final long DETECTION_COOLDOWN_MS = 2000;
 
     private SensorManager sensorManager;
+    private Sensor gyroscope;
+    private Sensor magneticField;
+    private final float[] latestGyroscope = new float[3];
+    private final float[] latestMagneticField = new float[3];
     private LocationManager locationManager;
     private Location lastLocation;
     private long lastDetectionAt = 0;
@@ -86,6 +90,15 @@ public class BumpDetectionService extends Service implements SensorEventListener
         Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         if (accelerometer != null) {
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+        }
+
+        gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        if (gyroscope != null) {
+            sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME);
+        }
+        magneticField = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        if (magneticField != null) {
+            sensorManager.registerListener(this, magneticField, SensorManager.SENSOR_DELAY_GAME);
         }
 
         boolean hasLocationPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -142,6 +155,14 @@ public class BumpDetectionService extends Service implements SensorEventListener
 
     @Override
     public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
+            System.arraycopy(event.values, 0, latestGyroscope, 0, Math.min(event.values.length, latestGyroscope.length));
+            return;
+        }
+        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            System.arraycopy(event.values, 0, latestMagneticField, 0, Math.min(event.values.length, latestMagneticField.length));
+            return;
+        }
         double z = event.values[2];
         double gForce = Math.abs(Math.abs(z) - GRAVITY_G) / GRAVITY_G;
 

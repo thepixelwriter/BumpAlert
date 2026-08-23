@@ -6,6 +6,7 @@ import { HazardSeverity, PotholeReport, TelemetryCluster } from '../../models/po
 import { TelemetryService } from '../../services/telemetry.service';
 import { GrievanceShareService } from '../../services/grievance-share.service';
 import { LiveAcceleration, LiveGyroscope, LiveLocation, PermissionState, SensorDetectionService } from '../../services/sensor-detection.service';
+import { MapNavigationService } from '../../services/map-navigation.service';
 
 const DISPLAY_ANOMALY_THRESHOLD_G = 1.8;
 
@@ -36,6 +37,12 @@ export class ReviewPage implements OnInit, OnDestroy {
   impactPulseActive = false;
   /** Rolling display buffer for the live impact graph. */
   liveSamples: number[] = Array(28).fill(0);
+  impactGraph: number[] = Array(42).fill(0);
+  vibrationGraph: number[] = Array(42).fill(0);
+  accelerationGraph: number[] = Array(42).fill(0);
+  gyroscopeGraph: number[] = Array(42).fill(0);
+  compassHeading: number | null = null;
+  locationName = 'Waiting for GPS';
   gyroscope: LiveGyroscope | null = null;
   acceleration: LiveAcceleration = { x: 0, y: 0, z: 0 };
   liveLocation: LiveLocation | null = null;
@@ -54,6 +61,10 @@ export class ReviewPage implements OnInit, OnDestroy {
   private permissionSub?: Subscription;
   private locationPermissionSub?: Subscription;
   private impactPulseTimer?: ReturnType<typeof setTimeout>;
+  private locationLookupToken = 0;
+  private lastLocationLookupAt = 0;
+  private lastLookupCoordinates: { latitude: number; longitude: number } | null = null;
+  private compassSub?: Subscription;
 
   constructor(
     private readonly telemetryService: TelemetryService,
@@ -62,6 +73,7 @@ export class ReviewPage implements OnInit, OnDestroy {
     private readonly toastCtrl: ToastController,
     private readonly alertCtrl: AlertController,
     private readonly router: Router,
+    private readonly mapNavigation: MapNavigationService,
   ) {}
 
   ngOnInit(): void {
@@ -84,18 +96,30 @@ export class ReviewPage implements OnInit, OnDestroy {
       this.hasLiveTelemetry = true;
       this.displayImpactG = Math.max(0, g);
       this.liveSamples = [...this.liveSamples.slice(1), Math.min(this.displayImpactG, 5)];
+      this.impactGraph = this.pushGraphValue(this.impactGraph, this.displayImpactG, 5);
       if (!wasImpactDetected && this.isImpactDetected) {
         this.triggerImpactPulse();
       }
     });
     this.gyroscopeSub = this.sensorDetection.liveGyroscope$.subscribe((gyroscope) => {
       this.gyroscope = gyroscope;
+      if (gyroscope) {
+        this.gyroscopeGraph = this.pushGraphValue(this.gyroscopeGraph, this.gyroscopeMagnitude(gyroscope), 180);
+      }
+    });
+    this.compassSub = this.sensorDetection.liveCompass$.subscribe((heading) => {
+      this.compassHeading = heading;
     });
     this.accelerationSub = this.sensorDetection.liveAcceleration$.subscribe((acceleration) => {
       this.acceleration = acceleration;
+      this.accelerationGraph = this.pushGraphValue(this.accelerationGraph, this.accelerationMagnitude(acceleration), 20);
+      this.vibrationGraph = this.pushGraphValue(this.vibrationGraph, this.vibrationMagnitude(acceleration), 5);
     });
     this.locationSub = this.sensorDetection.liveLocation$.subscribe((location) => {
       this.liveLocation = location;
+      if (location) {
+        void this.lookupLocationName(location.latitude, location.longitude);
+      }
     });
     this.permissionSub = this.sensorDetection.motionPermissionState$.subscribe((state) => {
       this.motionPermission = state;
@@ -117,6 +141,7 @@ export class ReviewPage implements OnInit, OnDestroy {
     this.locationSub?.unsubscribe();
     this.permissionSub?.unsubscribe();
     this.locationPermissionSub?.unsubscribe();
+    this.compassSub?.unsubscribe();
     if (this.impactPulseTimer) {
       clearTimeout(this.impactPulseTimer);
     }
@@ -130,8 +155,61 @@ export class ReviewPage implements OnInit, OnDestroy {
     return Math.max(5, Math.min(100, (sample / 5) * 100));
   }
 
+  graphPoints(samples: number[], maxValue: number): string {
+    const width = 640;
+    const height = 150;
+    const step = width / Math.max(samples.length - 1, 1);
+    return samples.map((sample, index) => `${(index * step).toFixed(1)},${(height - (Math.min(Math.abs(sample), maxValue) / maxValue) * 125 - 12).toFixed(1)}`).join(' ');
+  }
+
+  private pushGraphValue(samples: number[], value: number, maxValue: number): number[] {
+    return [...samples.slice(1), Math.min(Math.abs(value), maxValue)];
+  }
+
+  private accelerationMagnitude(value: LiveAcceleration): number {
+    return Math.sqrt(value.x ** 2 + value.y ** 2 + value.z ** 2);
+  }
+
+  private vibrationMagnitude(value: LiveAcceleration): number {
+    return Math.abs(this.accelerationMagnitude(value) - 9.80665);
+  }
+
+  private gyroscopeMagnitude(value: LiveGyroscope): number {
+    return Math.sqrt(value.alpha ** 2 + value.beta ** 2 + value.gamma ** 2);
+  }
+
+  private async lookupLocationName(latitude: number, longitude: number): Promise<void> {
+    const now = Date.now();
+    const previous = this.lastLookupCoordinates;
+    const movedEnough = !previous || Math.abs(previous.latitude - latitude) + Math.abs(previous.longitude - longitude) > 0.001;
+    if (now - this.lastLocationLookupAt < 30000 && !movedEnough) return;
+    this.lastLocationLookupAt = now;
+    this.lastLookupCoordinates = { latitude, longitude };
+    const token = ++this.locationLookupToken;
+    try {
+      const result = (await this.mapNavigation.geocodeAddress(`${latitude}, ${longitude}`))[0];
+      if (token === this.locationLookupToken) this.locationName = result ? this.areaNameFromLabel(result.label) : 'Unknown area';
+    } catch {
+      if (token === this.locationLookupToken) this.locationName = 'Location name unavailable';
+    }
+  }
+
+  private areaNameFromLabel(label: string): string {
+    const area = label.split(',')[0]?.trim();
+    return area || 'Unknown area';
+  }
+
   get isImpactDetected(): boolean {
     return this.liveGForce >= DISPLAY_ANOMALY_THRESHOLD_G;
+  }
+
+  get stableImpactG(): number {
+    return this.displayImpactG < 0.05 ? 0 : this.displayImpactG;
+  }
+
+  get compassDirection(): string {
+    if (this.compassHeading === null) return '--';
+    return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(this.compassHeading / 45) % 8];
   }
 
   get impactStatus(): string {

@@ -1,0 +1,22 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="glass-toolbar">
+    <ion-button fill="clear" class="header-icon-button" aria-label="Sensor controls"><ion-icon slot="icon-only" name="pulse-outline"></ion-icon></ion-button>
+    <ion-title class="app-header-title"><span>BUMP_ALERT</span></ion-title>
+    <ion-buttons slot="end"><ion-button fill="clear" class="header-icon-button" aria-label="GPS status"><ion-icon slot="icon-only" name="locate-outline"></ion-icon></ion-button></ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="history-canvas-content">
+  <div class="history-wrapper">
+    <div class="history-intro"><h1>Impact History</h1><p>Review recorded road events from this ride.</p></div>
+    <div class="history-summary"><div><span>SESSION EVENTS</span><strong>{{ reports.length }}</strong></div><div><span>PEAK G-FORCE</span><strong>{{ reports.length ? (reports[0].gForce | number: '1.2-2') : '0.00' }}<small>G</small></strong></div></div>
+    <div class="history-list" *ngIf="reports.length; else emptyHistory">
+      <div class="history-entry" *ngFor="let report of reports">
+        <div class="history-severity" [ngClass]="'severity-' + report.severity"><ion-icon name="warning-outline"></ion-icon></div>
+        <div class="history-entry-copy"><strong>{{ report.severity | uppercase }} IMPACT</strong><span>{{ report.timestamp | date: 'mediumTime' }} · {{ report.latitude | number: '1.4-4' }}, {{ report.longitude | number: '1.4-4' }}</span></div>
+        <b>{{ report.gForce | number: '1.2-2' }}<small>G</small></b>
+      </div>
+    </div>
+    <ng-template #emptyHistory><div class="history-empty"><ion-icon name="time-outline"></ion-icon><h2>No impact history</h2><p>Confirmed telemetry events will appear here during your ride.</p></div></ng-template>
+  </div>
+</ion-content>

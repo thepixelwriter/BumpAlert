@@ -50,6 +50,7 @@ export class SensorDetectionService implements OnDestroy {
   private readonly storageKey = 'bumpalert.telemetry-records.v1';
   private motionListener: PluginListenerHandle | null = null;
   private orientationListener: PluginListenerHandle | null = null;
+  private deviceOrientationListener: ((event: DeviceOrientationEvent) => void) | null = null;
   private lastDetectionAt = 0;
   private locationWatchId: string | null = null;
 
@@ -72,6 +73,10 @@ export class SensorDetectionService implements OnDestroy {
   private readonly liveGyroscopeSubject = new BehaviorSubject<LiveGyroscope | null>(null);
   /** Device rotation rate when the browser/device makes gyroscope data available. */
   readonly liveGyroscope$: Observable<LiveGyroscope | null> = this.liveGyroscopeSubject.asObservable();
+
+  private readonly liveCompassSubject = new BehaviorSubject<number | null>(null);
+  /** Magnetic compass heading in degrees clockwise from north. */
+  readonly liveCompass$: Observable<number | null> = this.liveCompassSubject.asObservable();
 
   private readonly motionPermissionSubject = new BehaviorSubject<PermissionState>('unknown');
   readonly motionPermissionState$: Observable<PermissionState> = this.motionPermissionSubject.asObservable();
@@ -133,6 +138,15 @@ export class SensorDetectionService implements OnDestroy {
           gamma: Math.round((event.gamma ?? 0) * 100) / 100,
         });
       });
+      this.deviceOrientationListener = (event: DeviceOrientationEvent) => {
+        const webkitHeading = (event as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading;
+        const heading = typeof webkitHeading === 'number' ? webkitHeading : event.absolute ? 360 - (event.alpha ?? 0) : null;
+        if (heading !== null && Number.isFinite(heading)) {
+          this.liveCompassSubject.next(Math.round((((heading % 360) + 360) % 360) * 100) / 100);
+        }
+      };
+      window.addEventListener('deviceorientationabsolute', this.deviceOrientationListener);
+      window.addEventListener('deviceorientation', this.deviceOrientationListener);
     } catch (error) {
       // Gyroscope support varies by device/browser; accelerometer sensing continues.
       console.info('BumpAlert: gyroscope telemetry is unavailable', error);
@@ -158,14 +172,30 @@ export class SensorDetectionService implements OnDestroy {
 
   async requestMotionPermission(): Promise<boolean> {
     const deviceMotionEventCtor = (window as unknown as { DeviceMotionEvent?: { requestPermission?: () => Promise<string> } }).DeviceMotionEvent;
+    const deviceOrientationEventCtor = (window as unknown as { DeviceOrientationEvent?: { requestPermission?: () => Promise<string> } }).DeviceOrientationEvent;
     if (typeof deviceMotionEventCtor?.requestPermission !== 'function') {
       this.motionPermissionSubject.next('not-required');
+      if (typeof deviceOrientationEventCtor?.requestPermission === 'function') {
+        try {
+          await deviceOrientationEventCtor.requestPermission();
+        } catch (error) {
+          console.info('BumpAlert: compass permission was not granted', error);
+        }
+      }
       return true;
     }
     try {
       const result = await deviceMotionEventCtor.requestPermission();
       this.motionPermissionSubject.next(result === 'granted' ? 'granted' : 'denied');
-      return result === 'granted';
+      if (result !== 'granted') return false;
+      if (typeof deviceOrientationEventCtor?.requestPermission === 'function') {
+        try {
+          await deviceOrientationEventCtor.requestPermission();
+        } catch (error) {
+          console.info('BumpAlert: compass permission was not granted', error);
+        }
+      }
+      return true;
     } catch (error) {
       console.warn('BumpAlert: motion permission request failed', error);
       this.motionPermissionSubject.next('denied');
@@ -179,6 +209,11 @@ export class SensorDetectionService implements OnDestroy {
     this.motionListener = null;
     await this.orientationListener?.remove();
     this.orientationListener = null;
+    if (this.deviceOrientationListener) {
+      window.removeEventListener('deviceorientationabsolute', this.deviceOrientationListener);
+      window.removeEventListener('deviceorientation', this.deviceOrientationListener);
+      this.deviceOrientationListener = null;
+    }
 
     if (this.isBackgroundDetectionSupported()) {
       try {
@@ -237,7 +272,7 @@ export class SensorDetectionService implements OnDestroy {
     this.liveAccelerationSubject.next(axes);
 
     const gForce = this.calculateGForce(event, axes);
-    this.liveGForceSubject.next(gForce);
+    this.liveGForceSubject.next(gForce < 0.05 ? 0 : gForce);
 
     const now = Date.now();
     if (now - this.lastDetectionAt < DETECTION_COOLDOWN_MS) {
