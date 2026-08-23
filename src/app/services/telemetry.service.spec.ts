@@ -3,6 +3,7 @@ import { take } from 'rxjs/operators';
 import { PotholeReport } from '../models/pothole-report.model';
 import { SensorDetectionService } from './sensor-detection.service';
 import { TelemetryService, haversineDistance } from './telemetry.service';
+import { ReviewPage } from '../pages/review/review.page';
 
 describe('TelemetryService current-session behavior', () => {
   let reportsSubject: BehaviorSubject<PotholeReport[]>;
@@ -59,5 +60,38 @@ describe('TelemetryService current-session behavior', () => {
 
   it('calculates zero distance for identical positions', () => {
     expect(haversineDistance(28.43176, 77.50294, 28.43176, 77.50294)).toBeCloseTo(0, 1);
+  });
+});
+
+describe('ReviewPage status and fallback labels', () => {
+  it('uses user-friendly fallback text and GPS Active when a location fix exists', () => {
+    const page = new ReviewPage(
+      {} as any,
+      {
+        startListening: async () => undefined,
+        startLocationWatch: async () => undefined,
+        refreshLocationPermissionState: async () => undefined,
+        needsMotionPermission: () => false,
+        requestMotionPermission: async () => false,
+        liveLocation$: { subscribe: () => ({ unsubscribe: () => undefined }) },
+        motionPermissionState$: { subscribe: () => ({ unsubscribe: () => undefined }) },
+        locationPermissionState$: { subscribe: () => ({ unsubscribe: () => undefined }) },
+        liveGForce$: { subscribe: () => ({ unsubscribe: () => undefined }) },
+        liveGyroscope$: { subscribe: () => ({ unsubscribe: () => undefined }) },
+        liveAcceleration$: { subscribe: () => ({ unsubscribe: () => undefined }) },
+        liveCompass$: { subscribe: () => ({ unsubscribe: () => undefined }) },
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    expect((page as any).areaNameFromLabel('')).toBe('Area unavailable');
+    expect((page as any).areaNameFromLabel('Unknown area')).toBe('Area unavailable');
+
+    page.liveLocation = { latitude: 28.431127, longitude: 77.502203, accuracy: 12 } as any;
+    expect(page.locationStatus).toBe('GPS Active');
   });
 });

@@ -18,7 +18,23 @@ export class GrievanceShareService {
   getStaticMapUrl(latitude: number, longitude: number, width = 640, height = 400, mapType = 'roadmap'): string {
     const apiKey = environment.googleMapsApiKey;
     const markerColor = 'red';
-    return `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=18&size=${width}x${height}&scale=2&maptype=${mapType}&markers=color:${markerColor}%7C${latitude},${longitude}&key=${apiKey}`;
+    const safeMapType = mapType || 'roadmap';
+    const safeApiKey = apiKey && apiKey !== 'YOUR_GOOGLE_MAPS_API_KEY' ? apiKey : '';
+
+    const params = new URLSearchParams({
+      center: `${latitude},${longitude}`,
+      zoom: '18',
+      size: `${width}x${height}`,
+      scale: '2',
+      maptype: safeMapType,
+      markers: `color:${markerColor}%7C${latitude},${longitude}`,
+    });
+
+    if (safeApiKey) {
+      params.set('key', safeApiKey);
+    }
+
+    return `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;
   }
 
   /**
@@ -40,13 +56,13 @@ export class GrievanceShareService {
     ctx.fillStyle = '#0e131b';
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Try drawing static map image
+    // 2. Try drawing static map image. If the configured key is invalid or blocked,
+    // keep the whole share flow working by falling back to a styled map surface.
     const mapUrl = this.getStaticMapUrl(report.latitude, report.longitude, 800, 380);
     try {
       const mapImg = await this.loadImage(mapUrl);
       ctx.drawImage(mapImg, 0, 0, width, 380);
     } catch {
-      // Fallback: draw stylish map grid if static map image CORS fails
       this.drawMapGridFallback(ctx, width, 380, report);
     }
 

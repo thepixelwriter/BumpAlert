@@ -188,15 +188,21 @@ export class ReviewPage implements OnInit, OnDestroy {
     const token = ++this.locationLookupToken;
     try {
       const result = (await this.mapNavigation.geocodeAddress(`${latitude}, ${longitude}`))[0];
-      if (token === this.locationLookupToken) this.locationName = result ? this.areaNameFromLabel(result.label) : 'Unknown area';
+      if (token === this.locationLookupToken) {
+        const fallback = result ? this.areaNameFromLabel(result.label) : 'Area unavailable';
+        this.locationName = fallback;
+      }
     } catch {
-      if (token === this.locationLookupToken) this.locationName = 'Location name unavailable';
+      if (token === this.locationLookupToken) this.locationName = 'Area unavailable';
     }
   }
 
   private areaNameFromLabel(label: string): string {
-    const area = label.split(',')[0]?.trim();
-    return area || 'Unknown area';
+    if (!label || !label.trim()) return 'Area unavailable';
+    const normalized = label.trim();
+    const area = normalized.split(',').filter(Boolean)[0]?.trim();
+    if (!area || /unknown|undefined/i.test(area)) return 'Area unavailable';
+    return area;
   }
 
   get isImpactDetected(): boolean {
@@ -232,9 +238,9 @@ export class ReviewPage implements OnInit, OnDestroy {
 
   get locationStatus(): string {
     if (this.liveLocation) {
-      return 'GPS fix active';
+      return 'GPS Active';
     }
-    return this.locationPermission === 'denied' ? 'GPS access denied' : 'Acquiring GPS fix';
+    return this.locationPermission === 'denied' ? 'GPS access denied' : 'Acquiring GPS';
   }
 
   get needsMotionPermission(): boolean {
@@ -286,7 +292,11 @@ export class ReviewPage implements OnInit, OnDestroy {
   async shareGrievance(event: Event, report: PotholeReport): Promise<void> {
     event.stopPropagation();
     this.selectedShareReport = report;
-    this.sharePreviewUrl = this.grievanceShare.getStaticMapUrl(report.latitude, report.longitude, 640, 360, 'satellite');
+    try {
+      this.sharePreviewUrl = await this.grievanceShare.generateGrievanceCardDataUrl(report);
+    } catch {
+      this.sharePreviewUrl = this.grievanceShare.getStaticMapUrl(report.latitude, report.longitude, 640, 360, 'satellite');
+    }
   }
 
   closeShareCard(): void {
