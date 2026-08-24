@@ -58,7 +58,7 @@ export class GrievanceShareService {
 
     // 2. Try drawing static map image. If the configured key is invalid or blocked,
     // keep the whole share flow working by falling back to a styled map surface.
-    const mapUrl = this.getStaticMapUrl(report.latitude, report.longitude, 800, 380);
+    const mapUrl = this.getStaticMapUrl(report.latitude, report.longitude, 800, 380, 'satellite');
     try {
       const mapImg = await this.loadImage(mapUrl);
       ctx.drawImage(mapImg, 0, 0, width, 380);
