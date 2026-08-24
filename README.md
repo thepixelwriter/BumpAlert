@@ -149,9 +149,11 @@ Native builds require the relevant platform SDK, signing configuration, and devi
 
 Contributions are welcome. Start by reviewing the open issues and existing discussions to understand current priorities.
 
-1. Fork the repository.
+> All contributor work should be based on the `contributors` branch, not `main`. Fork the repository and create your feature or fix branch from `contributors`, then open a pull request targeting the `contributors` branch.
+
+1. Fork the repository from the `contributors` branch.
 2. Clone your fork locally.
-3. Create a focused branch from `main`.
+3. Create a focused branch from `contributors`.
 4. Install the required app dependencies.
 5. Make the change and add or update tests where appropriate.
 6. Run the relevant build, test, and lint commands.

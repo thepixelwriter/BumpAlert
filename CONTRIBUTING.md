@@ -159,6 +159,8 @@ git --version
 
 ### Fork the Repository
 
+Contributors should fork from the repository's `contributors` branch and use it as the base for all feature work and fixes.
+
 1. Visit [https://github.com/thepixelwriter/BumpAlert](https://github.com/thepixelwriter/BumpAlert)
 2. Click **Fork** in the top-right corner
 3. Clone your fork locally:
@@ -170,20 +172,24 @@ cd BumpAlert
 
 ### Add Upstream Remote
 
-To keep your fork in sync with the main repository:
+To keep your fork in sync with the main repository's `contributors` branch:
 
 ```bash
 git remote add upstream https://github.com/thepixelwriter/BumpAlert.git
 git fetch upstream
+git checkout contributors
+git pull upstream contributors
 ```
 
 ### Create a Working Branch
 
-Always work on a dedicated branch, never directly on `main`:
+Always work on a dedicated branch, never directly on `contributors`:
 
 ```bash
-git checkout -b feature/your-feature-name
+git checkout -b feature/your-feature-name contributors
 ```
+
+When opening a pull request, target the repository's `contributors` branch rather than `main`.
 
 ### Install Dependencies
 
@@ -195,13 +201,15 @@ npm install
 
 ## Branch Naming
 
-Use clear, descriptive branch names:
+Use clear, descriptive branch names, and base them off `contributors`:
 
 - **Feature**: `feature/add-bike-detection-improvements`
 - **Bug fix**: `fix/map-not-loading-on-ios`
 - **Documentation**: `docs/add-detection-algorithm-guide`
 - **Refactor**: `refactor/simplify-sensor-service`
 - **Tests**: `test/add-motion-listener-tests`
+
+All pull requests for community contributions should target the `contributors` branch.
 
 ## Configuration and Secrets
 
@@ -877,7 +885,7 @@ Before submitting your pull request, verify:
 - **Initial review**: Within a few days (we're mostly volunteers)
 - **Feedback**: Clear and constructive comments on code, tests, and documentation
 - **Iterations**: Multiple rounds of feedback are normal—don't be discouraged
-- **Merge**: Once approved, your PR will be merged to `main`
+- **Merge**: Once approved, your PR will be merged to the `contributors` branch
 - **Recognition**: You'll be credited for your contribution
 
 ## Get Help
