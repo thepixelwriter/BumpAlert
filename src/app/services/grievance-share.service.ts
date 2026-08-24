@@ -37,6 +37,24 @@ export class GrievanceShareService {
     return `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;
   }
 
+  getStreetViewUrl(latitude: number, longitude: number, width = 640, height = 400): string {
+    const apiKey = environment.googleMapsApiKey;
+    const safeApiKey = apiKey && apiKey !== 'YOUR_GOOGLE_MAPS_API_KEY' ? apiKey : '';
+    const params = new URLSearchParams({
+      size: `${Math.min(width, 640)}x${Math.min(height, 640)}`,
+      location: `${latitude},${longitude}`,
+      fov: '90',
+      heading: '0',
+      pitch: '0',
+    });
+
+    if (safeApiKey) {
+      params.set('key', safeApiKey);
+    }
+
+    return `https://maps.googleapis.com/maps/api/streetview?${params.toString()}`;
+  }
+
   /**
    * Creates an HTML5 Canvas combining the static map snapshot with a high-contrast
    * motorcycle telemetry impact statistics banner.
@@ -58,12 +76,18 @@ export class GrievanceShareService {
 
     // 2. Try drawing static map image. If the configured key is invalid or blocked,
     // keep the whole share flow working by falling back to a styled map surface.
-    const mapUrl = this.getStaticMapUrl(report.latitude, report.longitude, 800, 380, 'satellite');
     try {
-      const mapImg = await this.loadImage(mapUrl);
-      ctx.drawImage(mapImg, 0, 0, width, 380);
+      // Street View has the most useful road context when coverage exists.
+      const streetViewImg = await this.loadImage(this.getStreetViewUrl(report.latitude, report.longitude, 640, 380));
+      ctx.drawImage(streetViewImg, 0, 0, width, 380);
     } catch {
-      this.drawMapGridFallback(ctx, width, 380, report);
+      try {
+        // Satellite remains useful where Street View has no coverage.
+        const satelliteImg = await this.loadImage(this.getStaticMapUrl(report.latitude, report.longitude, 640, 380, 'satellite'));
+        ctx.drawImage(satelliteImg, 0, 0, width, 380);
+      } catch {
+        this.drawMapGridFallback(ctx, width, 380, report);
+      }
     }
 
     // 3. Draw gradient separator overlay over map
