@@ -4,11 +4,41 @@
 }
 
 .review-spacer-toolbar {
-  --background: var(--ion-background-color);
+  --background: rgba(10, 18, 28, 0.96);
   --border-width: 0;
   --border-style: none;
   --border-color: transparent;
   box-shadow: none;
+  min-height: 74px;
+  padding-inline: 14px;
+}
+
+.app-brand-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding-top: max(18px, calc(var(--ion-safe-area-top, 0px) + 10px));
+  padding-bottom: 12px;
+}
+
+.brand-lockup {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0;
+  margin: 0 auto;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  font-size: clamp(1.25rem, 1.2vw + 0.95rem, 1.8rem);
+}
+
+.brand-bump {
+  color: #ff9d4d;
+}
+
+.brand-alert {
+  color: #f8fbff;
 }
 
 .review-canvas-content {

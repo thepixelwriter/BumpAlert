@@ -16,6 +16,19 @@ const ALERT_TICK_MS = 100;
 const DEFAULT_CENTER = { lat: 28.6139, lng: 77.209 };
 const DEFAULT_ZOOM = 16;
 const SEARCH_DEBOUNCE_MS = 400;
+const NIGHT_MAP_STYLES: google.maps.MapTypeStyle[] = [
+  { featureType: 'all', elementType: 'geometry', stylers: [{ color: '#142132' }] },
+  { featureType: 'all', elementType: 'labels.text.fill', stylers: [{ color: '#dfeaf6' }] },
+  { featureType: 'all', elementType: 'labels.text.stroke', stylers: [{ color: '#0f172a' }, { weight: 1 }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2b3b4d' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#334a66' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#2b3848' }] },
+  { featureType: 'poi', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#b7c7d9' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0b1f32' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#1e2d3d' }] },
+  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#162534' }] },
+];
 
 @Component({
   selector: 'app-dashboard',
@@ -140,6 +153,10 @@ export class DashboardPage implements OnInit, OnDestroy {
         zoom: DEFAULT_ZOOM,
         disableDefaultUI: true,
         zoomControl: false,
+        styles: NIGHT_MAP_STYLES,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
       });
     } catch (error) {
       console.error('BumpAlert: failed to load Google Maps', error);

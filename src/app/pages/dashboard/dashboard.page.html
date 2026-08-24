@@ -1,5 +1,33 @@
 <ion-content [fullscreen]="true" class="dashboard-content">
   <div class="map-viewport">
+    <div class="app-topbar">
+      <button type="button" class="menu-button" aria-label="Open menu">
+        <ion-icon name="menu-outline"></ion-icon>
+      </button>
+
+      <div class="brand-lockup" aria-label="BumpAlert app title">
+        <span class="brand-bump">Bump</span><span class="brand-alert">Alert</span>
+      </div>
+
+      <div class="topbar-status" aria-hidden="true">
+        <span class="status-dot"></span>
+        <span class="status-dot muted"></span>
+      </div>
+    </div>
+
+    <div class="map-summary-card">
+      <div class="summary-icon-wrap">
+        <ion-icon name="warning-outline"></ion-icon>
+      </div>
+      <div class="summary-text-wrap">
+        <div class="summary-title">7 Bumps Detected</div>
+        <div class="summary-meta">2.3 km • 15 Aug 2025, 08:45 AM</div>
+      </div>
+      <button type="button" class="summary-action" aria-label="Open settings">
+        <ion-icon name="settings-outline"></ion-icon>
+      </button>
+    </div>
+
     <div #mapContainer class="map-container"></div>
 
     <div class="map-error" *ngIf="mapLoadError">
