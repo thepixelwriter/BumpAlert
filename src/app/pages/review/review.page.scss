@@ -1,3 +1,16 @@
+.review-spacer-header {
+  box-shadow: none;
+  border: 0;
+}
+
+.review-spacer-toolbar {
+  --background: var(--ion-background-color);
+  --border-width: 0;
+  --border-style: none;
+  --border-color: transparent;
+  box-shadow: none;
+}
+
 .review-canvas-content {
   --background: var(--ion-background-color);
   overflow-y: auto;

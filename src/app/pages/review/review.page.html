@@ -1,4 +1,8 @@
-<ion-content [fullscreen]="true" class="review-canvas-content">
+<ion-header class="ion-no-border review-spacer-header">
+  <ion-toolbar class="review-spacer-toolbar"></ion-toolbar>
+</ion-header>
+
+<ion-content class="review-canvas-content">
 
   <!-- Pull down the screen to reload / fetch fresh telemetry -->
   <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
