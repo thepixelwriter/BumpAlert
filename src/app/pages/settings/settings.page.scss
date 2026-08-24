@@ -221,6 +221,12 @@
   }
 }
 
+.vehicle-mode-segment {
+  flex: 0 0 150px;
+  --background: var(--app-surface-2);
+  --border-radius: var(--app-element-radius);
+}
+
 .setting-badge-active {
   font-size: 0.75rem;
   font-weight: 600;

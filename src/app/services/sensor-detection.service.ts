@@ -10,17 +10,23 @@ import { BackgroundBumpDetection } from './background-bump-detection';
 /** Standard gravity, used as the baseline to subtract from raw accelerometer readings. */
 const GRAVITY_G = 9.80665;
 
-/** Below this delta the reading is considered normal road vibration and ignored. */
-const MODERATE_G_THRESHOLD = 1.8;
+export type VehicleMode = 'bike' | 'car';
 
-/** At/above this delta the bump is classified as severe (typical for Indian road potholes). */
-const SEVERE_G_THRESHOLD = 2.2;
+interface DetectionProfile {
+  moderateG: number;
+  severeG: number;
+  alarmingG: number;
+  cooldownMs: number;
+}
 
-/** At/above this delta the impact is classified as alarming, overriding severe/moderate. */
-const ALARMING_G_THRESHOLD = 4.0;
-
-/** Minimum time between two accepted detections, to avoid duplicate triggers from one bump. */
-const DETECTION_COOLDOWN_MS = 2000;
+const DETECTION_PROFILES: Record<VehicleMode, DetectionProfile> = {
+  bike: { moderateG: 1.8, severeG: 2.2, alarmingG: 4.0, cooldownMs: 2000 },
+  // Car impacts are softer, but still need speed and a short motion/elevation pattern.
+  car: { moderateG: 0.9, severeG: 1.5, alarmingG: 3.2, cooldownMs: 1600 },
+};
+const VEHICLE_MODE_STORAGE_KEY = 'bumpalert.vehicle-mode';
+const CAR_MOTION_WINDOW_MS = 550;
+const ELEVATION_WINDOW_MS = 10000;
 
 export type PermissionState = 'granted' | 'denied' | 'prompt' | 'not-required' | 'unknown';
 
@@ -41,6 +47,8 @@ export interface LiveLocation {
   latitude: number;
   longitude: number;
   accuracy: number | null;
+  speed: number | null;
+  altitude: number | null;
 }
 
 @Injectable({
@@ -53,6 +61,10 @@ export class SensorDetectionService implements OnDestroy {
   private deviceOrientationListener: ((event: DeviceOrientationEvent) => void) | null = null;
   private lastDetectionAt = 0;
   private locationWatchId: string | null = null;
+  private recentMotion: Array<{ at: number; gForce: number }> = [];
+  private elevationSamples: Array<{ at: number; altitude: number; speed: number; accuracy: number }> = [];
+  private readonly vehicleModeSubject = new BehaviorSubject<VehicleMode>(this.restoreVehicleMode());
+  readonly vehicleMode$: Observable<VehicleMode> = this.vehicleModeSubject.asObservable();
 
   private readonly pendingReportsSubject = new BehaviorSubject<PotholeReport[]>([]);
   /** All events captured during the current trip that haven't been finalized yet. */
@@ -89,6 +101,21 @@ export class SensorDetectionService implements OnDestroy {
   readonly locationPermissionState$: Observable<PermissionState> = this.locationPermissionSubject.asObservable();
 
   private listening = false;
+
+  get vehicleMode(): VehicleMode {
+    return this.vehicleModeSubject.value;
+  }
+
+  setVehicleMode(mode: VehicleMode): void {
+    this.vehicleModeSubject.next(mode);
+    try { localStorage.setItem(VEHICLE_MODE_STORAGE_KEY, mode); } catch { /* storage can be unavailable */ }
+    this.recentMotion = [];
+    this.elevationSamples = [];
+    this.lastDetectionAt = 0;
+    if (this.listening && this.isBackgroundDetectionSupported()) {
+      void BackgroundBumpDetection.start({ vehicleMode: mode });
+    }
+  }
 
   constructor() {
     this.restoreStoredReports();
@@ -157,7 +184,7 @@ export class SensorDetectionService implements OnDestroy {
 
     if (this.isBackgroundDetectionSupported()) {
       try {
-        await BackgroundBumpDetection.start();
+        await BackgroundBumpDetection.start({ vehicleMode: this.vehicleMode });
       } catch (error) {
         console.warn('BumpAlert: unable to start background bump detection', error);
       }
@@ -241,7 +268,10 @@ export class SensorDetectionService implements OnDestroy {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
+            speed: position.coords.speed,
+            altitude: position.coords.altitude,
           });
+          this.recordElevation(position.coords.altitude, position.coords.speed, position.coords.accuracy);
         },
       );
     } catch (error) {
@@ -275,11 +305,13 @@ export class SensorDetectionService implements OnDestroy {
     this.liveGForceSubject.next(gForce < 0.05 ? 0 : gForce);
 
     const now = Date.now();
-    if (now - this.lastDetectionAt < DETECTION_COOLDOWN_MS) {
+    this.recentMotion = [...this.recentMotion.filter((sample) => now - sample.at <= CAR_MOTION_WINDOW_MS), { at: now, gForce }];
+    const profile = DETECTION_PROFILES[this.vehicleMode];
+    if (now - this.lastDetectionAt < profile.cooldownMs) {
       return;
     }
 
-    const severity = this.classifyGForce(gForce);
+    const severity = this.classifyGForce(gForce, now);
     if (!severity) {
       return;
     }
@@ -338,17 +370,53 @@ export class SensorDetectionService implements OnDestroy {
   }
 
   /** Converts G-Force reading into severity classification. */
-  private classifyGForce(gForce: number): HazardSeverity | null {
-    if (gForce >= ALARMING_G_THRESHOLD) {
+  private classifyGForce(gForce: number, now: number): HazardSeverity | null {
+    const profile = DETECTION_PROFILES[this.vehicleMode];
+    if (gForce >= profile.alarmingG) {
       return 'alarming';
     }
-    if (gForce >= SEVERE_G_THRESHOLD) {
+    if (gForce >= profile.severeG && (this.vehicleMode === 'bike' || this.hasCarContext(gForce, now))) {
       return 'severe';
     }
-    if (gForce >= MODERATE_G_THRESHOLD) {
+    if (gForce >= profile.moderateG && (this.vehicleMode === 'bike' || this.hasCarContext(gForce, now))) {
       return 'moderate';
     }
     return null;
+  }
+
+  private hasCarContext(gForce: number, now: number): boolean {
+    const hasMotionShape = this.recentMotion.length >= 2 && this.recentMotion.some((sample) => sample.gForce >= 0.5 && sample.gForce < gForce);
+    return hasMotionShape || (gForce >= 0.65 && this.hasElevationSupport(now));
+  }
+
+  private recordElevation(altitude: number | null, speed: number | null, accuracy: number | null): void {
+    if (this.vehicleMode !== 'car' || altitude === null || speed === null || accuracy === null || accuracy > 30 || speed < 2 || speed > 35) {
+      return;
+    }
+    const now = Date.now();
+    this.elevationSamples = [
+      ...this.elevationSamples.filter((sample) => now - sample.at <= ELEVATION_WINDOW_MS),
+      { at: now, altitude, speed, accuracy },
+    ];
+  }
+
+  /** Accept only a local rise followed by a peak, optionally already followed by a fall. */
+  private hasElevationSupport(now: number): boolean {
+    const samples = this.elevationSamples.filter((sample) => now - sample.at <= ELEVATION_WINDOW_MS);
+    if (samples.length < 3) return false;
+    const peakIndex = samples.reduce((index, sample, candidateIndex, all) => sample.altitude > all[index].altitude ? candidateIndex : index, 0);
+    if (peakIndex === 0) return false;
+    const rise = samples[peakIndex].altitude - samples[0].altitude;
+    const fall = samples[peakIndex].altitude - samples[samples.length - 1].altitude;
+    return rise >= 0.7 && (fall >= 0.3 || now - samples[peakIndex].at <= 2200);
+  }
+
+  private restoreVehicleMode(): VehicleMode {
+    try {
+      return localStorage.getItem(VEHICLE_MODE_STORAGE_KEY) === 'car' ? 'car' : 'bike';
+    } catch {
+      return 'bike';
+    }
   }
 
   private async captureDetection(gForce: number, severity: HazardSeverity): Promise<void> {

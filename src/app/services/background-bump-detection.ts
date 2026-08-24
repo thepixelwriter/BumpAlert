@@ -1,5 +1,6 @@
 import { registerPlugin } from '@capacitor/core';
 import { HazardSeverity } from '../models/pothole-report.model';
+import type { VehicleMode } from './sensor-detection.service';
 
 export interface BackgroundBumpReport {
   id: string;
@@ -16,7 +17,7 @@ export interface BackgroundBumpReport {
  * iOS suspend this kind of background work entirely, so there is no equivalent on those platforms.
  */
 export interface BackgroundBumpDetectionPlugin {
-  start(): Promise<void>;
+  start(options?: { vehicleMode: VehicleMode }): Promise<void>;
   stop(): Promise<void>;
   /** Reads and clears whatever bumps the native service captured since the last drain. */
   drainReports(): Promise<{ reports: BackgroundBumpReport[] }>;

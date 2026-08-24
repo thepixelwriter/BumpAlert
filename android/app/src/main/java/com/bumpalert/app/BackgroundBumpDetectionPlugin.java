@@ -85,6 +85,8 @@ public class BackgroundBumpDetectionPlugin extends Plugin {
 
     private void startService(PluginCall call) {
         Intent intent = new Intent(getContext(), BumpDetectionService.class);
+        String vehicleMode = call.getString("vehicleMode", "bike");
+        intent.putExtra(BumpDetectionService.VEHICLE_MODE_EXTRA, "car".equals(vehicleMode) ? "car" : "bike");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             getContext().startForegroundService(intent);
         } else {

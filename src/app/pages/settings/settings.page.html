@@ -104,6 +104,28 @@
         <!-- Live Sensor Monitor Row -->
         <div class="setting-row">
           <div class="row-label-group">
+            <span class="row-title">Vehicle mode</span>
+            <span class="row-subtitle">Tune road-feature detection for your mount</span>
+          </div>
+          <ion-segment
+            [value]="vehicleMode"
+            (ionChange)="onVehicleModeChange($any($event.detail.value))"
+            class="vehicle-mode-segment"
+            aria-label="Vehicle mode"
+          >
+            <ion-segment-button value="bike">
+              <ion-label>Bike</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="car">
+              <ion-label>Car</ion-label>
+            </ion-segment-button>
+          </ion-segment>
+        </div>
+
+        <div class="guide-divider"></div>
+
+        <div class="setting-row">
+          <div class="row-label-group">
             <span class="row-title">Motion Sensor Stream</span>
             <span class="row-subtitle">
               {{ isSensingActive ? 'Real-time accelerometer active' : 'Sensor idle / paused' }}

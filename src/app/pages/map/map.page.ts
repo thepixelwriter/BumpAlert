@@ -143,6 +143,8 @@ export class MapPage implements OnInit, OnDestroy {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         accuracy: position.coords.accuracy,
+        speed: position.coords.speed,
+        altitude: position.coords.altitude,
       };
       this.currentSpeedKph = position.coords.speed === null || position.coords.speed < 0
         ? null

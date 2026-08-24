@@ -3,7 +3,7 @@ import { Subscription } from 'rxjs';
 import { ToastController, AlertController } from '@ionic/angular';
 import { TelemetryService } from '../../services/telemetry.service';
 import { WakeLockService } from '../../services/wake-lock.service';
-import { SensorDetectionService, LiveAcceleration, PermissionState } from '../../services/sensor-detection.service';
+import { SensorDetectionService, LiveAcceleration, PermissionState, VehicleMode } from '../../services/sensor-detection.service';
 
 @Component({
   selector: 'app-settings',
@@ -21,6 +21,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   soundAlerts = true;
   keepScreenAwake = true;
   detectionSensitivity = 'normal'; // 'sensitive' | 'normal' | 'relaxed'
+  vehicleMode: VehicleMode = 'bike';
 
   // Live Sensor Readouts
   liveGForce = 0;
@@ -39,6 +40,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   private gForceSub?: Subscription;
   private accelSub?: Subscription;
   private permSub?: Subscription;
+  private vehicleModeSub?: Subscription;
 
   constructor(
     private readonly telemetryService: TelemetryService,
@@ -52,6 +54,9 @@ export class SettingsPage implements OnInit, OnDestroy {
     const savedTheme = localStorage.getItem('bumpalert_theme');
     if (savedTheme) this.selectedTheme = savedTheme;
     this.onThemeChange(this.selectedTheme);
+    this.vehicleModeSub = this.sensorDetection.vehicleMode$.subscribe((mode) => {
+      this.vehicleMode = mode;
+    });
 
     const savedHaptic = localStorage.getItem('bumpalert_haptic');
     if (savedHaptic !== null) this.hapticFeedback = savedHaptic === 'true';
@@ -78,6 +83,7 @@ export class SettingsPage implements OnInit, OnDestroy {
     this.gForceSub?.unsubscribe();
     this.accelSub?.unsubscribe();
     this.permSub?.unsubscribe();
+    this.vehicleModeSub?.unsubscribe();
   }
 
   onThemeChange(theme: string): void {
@@ -98,6 +104,10 @@ export class SettingsPage implements OnInit, OnDestroy {
 
   onHapticToggle(): void {
     localStorage.setItem('bumpalert_haptic', String(this.hapticFeedback));
+  }
+
+  onVehicleModeChange(mode: VehicleMode): void {
+    this.sensorDetection.setVehicleMode(mode);
   }
 
   async requestMotionPermission(): Promise<void> {

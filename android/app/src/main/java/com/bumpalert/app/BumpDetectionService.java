@@ -20,6 +20,8 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Looper;
 
+import java.util.ArrayDeque;
+
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
@@ -36,12 +38,10 @@ import org.json.JSONObject;
 public class BumpDetectionService extends Service implements SensorEventListener, LocationListener {
 
     static final String CHANNEL_ID = "bump_detection_channel";
+    static final String VEHICLE_MODE_EXTRA = "vehicleMode";
     private static final int NOTIFICATION_ID = 4821;
 
     private static final double GRAVITY_G = 9.80665;
-    private static final double MODERATE_G_THRESHOLD = 1.8;
-    private static final double SEVERE_G_THRESHOLD = 2.2;
-    private static final double ALARMING_G_THRESHOLD = 4.0;
     private static final long DETECTION_COOLDOWN_MS = 2000;
 
     private SensorManager sensorManager;
@@ -52,6 +52,8 @@ public class BumpDetectionService extends Service implements SensorEventListener
     private LocationManager locationManager;
     private Location lastLocation;
     private long lastDetectionAt = 0;
+    private String vehicleMode = "bike";
+    private final ArrayDeque<Location> elevationSamples = new ArrayDeque<>();
 
     @Override
     public void onCreate() {
@@ -62,6 +64,9 @@ public class BumpDetectionService extends Service implements SensorEventListener
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null) {
+            vehicleMode = "car".equals(intent.getStringExtra(VEHICLE_MODE_EXTRA)) ? "car" : "bike";
+        }
         startForeground(NOTIFICATION_ID, buildNotification());
         startSensing();
         return START_STICKY;
@@ -151,6 +156,12 @@ public class BumpDetectionService extends Service implements SensorEventListener
     @Override
     public void onLocationChanged(Location location) {
         lastLocation = location;
+        if ("car".equals(vehicleMode) && location.hasAltitude() && location.hasSpeed() && location.getAccuracy() <= 30
+            && location.getSpeed() >= 2 && location.getSpeed() <= 35) {
+            elevationSamples.addLast(location);
+            long cutoff = System.currentTimeMillis() - 10000;
+            while (!elevationSamples.isEmpty() && elevationSamples.peekFirst().getTime() < cutoff) elevationSamples.removeFirst();
+        }
     }
 
     @Override
@@ -167,16 +178,20 @@ public class BumpDetectionService extends Service implements SensorEventListener
         double gForce = Math.abs(Math.abs(z) - GRAVITY_G) / GRAVITY_G;
 
         long now = System.currentTimeMillis();
-        if (now - lastDetectionAt < DETECTION_COOLDOWN_MS) {
+        long cooldown = "car".equals(vehicleMode) ? 1600 : DETECTION_COOLDOWN_MS;
+        if (now - lastDetectionAt < cooldown) {
             return;
         }
 
         String severity = null;
-        if (gForce >= ALARMING_G_THRESHOLD) {
+        double alarming = "car".equals(vehicleMode) ? 3.2 : 4.0;
+        double severe = "car".equals(vehicleMode) ? 1.5 : 2.2;
+        double moderate = "car".equals(vehicleMode) ? 0.9 : 1.8;
+        if (gForce >= alarming) {
             severity = "alarming";
-        } else if (gForce >= SEVERE_G_THRESHOLD) {
+        } else if (gForce >= severe && (!"car".equals(vehicleMode) || hasCarContext(gForce))) {
             severity = "severe";
-        } else if (gForce >= MODERATE_G_THRESHOLD) {
+        } else if (gForce >= moderate && (!"car".equals(vehicleMode) || hasCarContext(gForce))) {
             severity = "moderate";
         }
         if (severity == null || lastLocation == null) {
@@ -185,6 +200,18 @@ public class BumpDetectionService extends Service implements SensorEventListener
 
         lastDetectionAt = now;
         recordReport(gForce, severity);
+    }
+
+    private boolean hasCarContext(double gForce) {
+        if (lastLocation == null || !lastLocation.hasSpeed() || lastLocation.getSpeed() < 2) return false;
+        if (gForce >= 1.5) return true;
+        if (elevationSamples.size() < 3) return false;
+        Location first = elevationSamples.peekFirst();
+        Location last = elevationSamples.peekLast();
+        Location peak = first;
+        for (Location sample : elevationSamples) if (sample.getAltitude() > peak.getAltitude()) peak = sample;
+        return peak != first && peak.getAltitude() - first.getAltitude() >= 0.7
+            && (peak.getAltitude() - last.getAltitude() >= 0.3 || System.currentTimeMillis() - peak.getTime() <= 2200);
     }
 
     private void recordReport(double gForce, String severity) {

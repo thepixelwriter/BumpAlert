@@ -1,15 +1,3 @@
-<ion-header class="ion-no-border">
-  <ion-toolbar class="glass-toolbar">
-    <div class="app-header-title" style="margin-left: 5px;"><span>BumpAlert</span><small>Report and make roads better</small></div>
-    <ion-buttons slot="end">
-      <div class="header-live-tag">
-        <span class="live-pulse-dot"></span>
-        <span class="live-gforce-text">{{ hasLiveTelemetry ? (liveGForce | number: '1.2-2') + ' G' : 'Waiting for telemetry' }}</span>
-      </div>
-    </ion-buttons>
-  </ion-toolbar>
-</ion-header>
-
 <ion-content [fullscreen]="true" class="review-canvas-content">
 
   <!-- Pull down the screen to reload / fetch fresh telemetry -->
