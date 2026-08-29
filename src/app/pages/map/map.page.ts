@@ -65,6 +65,8 @@ export class MapPage implements OnInit, OnDestroy {
 
   mapLoadError: string | null = null;
   private map?: google.maps.Map;
+  /** Animated circle overlay centered on the blue dot, for a live location pulse. */
+  private locationCircle?: google.maps.Circle;
   private currentLocationMarker?: google.maps.Marker;
   private destinationMarker?: google.maps.Marker;
   private routeLine?: google.maps.Polyline;
@@ -89,6 +91,9 @@ export class MapPage implements OnInit, OnDestroy {
   // Motion permission state — drives the permission prompt banner
   motionPermissionState: PermissionState = 'unknown';
 
+  /** Expose Math to the template for inline width calculations on the info bars. */
+  readonly Math = Math;
+
   constructor(
     private readonly sensorDetection: SensorDetectionService,
     private readonly mapNavigation: MapNavigationService,
@@ -99,7 +104,7 @@ export class MapPage implements OnInit, OnDestroy {
     private readonly router: Router,
   ) {}
 
-  closeMap(): void { void this.router.navigateByUrl('/tabs/telemetry'); }
+  // Removed closeMap — map is now a persistent tab in the bottom navigation
 
   async ngOnInit(): Promise<void> {
     await this.initMap();
@@ -195,6 +200,9 @@ export class MapPage implements OnInit, OnDestroy {
   }
 
   async ngOnDestroy(): Promise<void> {
+    this.stopLocationAnimation();
+    this.locationCircle?.setMap(null);
+    this.locationCircle = undefined;
     this.gForceSub?.unsubscribe();
     this.accelSub?.unsubscribe();
     this.detectSub?.unsubscribe();
@@ -281,22 +289,70 @@ export class MapPage implements OnInit, OnDestroy {
     const position = { lat: latitude, lng: longitude };
 
     if (!this.currentLocationMarker) {
+      // Animated pulse circle
+      this.locationCircle = new google.maps.Circle({
+        center: position,
+        map: this.map,
+        radius: 35,
+        fillColor: '#3880ff88',
+        fillOpacity: 0.6,
+        strokeColor: '#3880ff',
+        strokeOpacity: 0.0,
+        strokeWeight: 0,
+        zIndex: 99,
+      });
+
+      // Inner dot for the blue marker
       this.currentLocationMarker = new google.maps.Marker({
         position,
         map: this.map,
         zIndex: 100,
         title: 'Current location',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          fillColor: '#3880ff',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2,
+          scale: 8,
+        },
       });
+
       this.map.setCenter(position);
       this.map.setZoom(DEFAULT_ZOOM);
       this.hasCenteredOnCurrentLocation = true;
+      this.animateLocationPulse();
     } else {
       this.currentLocationMarker.setPosition(position);
+      this.locationCircle?.setCenter(position);
       if (!this.hasCenteredOnCurrentLocation) {
         this.map.setCenter(position);
         this.map.setZoom(DEFAULT_ZOOM);
         this.hasCenteredOnCurrentLocation = true;
       }
+    }
+  }
+
+  private animationFrameId?: number;
+  private pulsePhase = 0;
+
+  private animateLocationPulse(): void {
+    if (!this.locationCircle) return;
+    this.pulsePhase += 0.05;
+
+    const radius = 35 + 15 * Math.sin(this.pulsePhase);
+    const opacity = 0.6 + 0.2 * Math.sin(this.pulsePhase);
+
+    this.locationCircle.set('radius', radius);
+    this.locationCircle.set('fillOpacity', opacity);
+
+    this.animationFrameId = requestAnimationFrame(() => this.animateLocationPulse());
+  }
+
+  private stopLocationAnimation(): void {
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = undefined;
     }
   }
 

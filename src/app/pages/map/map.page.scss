@@ -1186,3 +1186,157 @@
   --color: #f3fbfd;
   --border-radius: 18px;
 }
+
+/* App-brand toolbar pinned above the map, matching the telemetry tab */
+.map-spacer-header {
+  box-shadow: none;
+  border: 0;
+}
+
+.map-spacer-toolbar {
+  --background: rgba(10, 18, 28, 0.96);
+  --border-width: 0;
+  --border-style: none;
+  --border-color: transparent;
+  box-shadow: none;
+  min-height: 74px;
+  padding-inline: 14px;
+}
+
+.app-brand-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding-top: max(18px, calc(var(--ion-safe-area-top, 0px) + 10px));
+  padding-bottom: 12px;
+}
+
+.brand-lockup {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0;
+  margin: 0 auto;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  font-size: clamp(1.25rem, 1.2vw + 0.95rem, 1.8rem);
+}
+
+.brand-bump {
+  color: #ff9d4d;
+}
+
+.brand-alert {
+  color: #f8fbff;
+}
+
+/* Animated info overlay — two cards side-by-side at 50% width */
+.map-info-overlay {
+  position: absolute;
+  top: calc(74px + env(safe-area-inset-top, 0px) + 8px);
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 10px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.map-info-card {
+  pointer-events: auto;
+  flex: 1 1 50%;
+  max-width: 50%;
+  background: rgba(10, 31, 42, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(130, 222, 244, 0.18);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 20px rgba(0, 7, 12, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  animation: card-enter 0.45s ease-out both;
+}
+
+.map-info-card.card-pulse {
+  animation: card-enter 0.45s ease-out both, pulse-glow 1.4s ease-in-out infinite;
+}
+
+.map-info-card.card-danger {
+  border-color: rgba(248, 113, 113, 0.45);
+  box-shadow: 0 4px 24px rgba(248, 113, 113, 0.15);
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 4px 20px rgba(0, 7, 12, 0.35); }
+  50% { box-shadow: 0 4px 28px rgba(56, 189, 248, 0.25); }
+}
+
+.map-info-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #8eb9c4;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.map-info-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #f3fbfd;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  transition: color 0.3s ease, transform 0.2s ease;
+  animation: value-pop 0.35s ease-out;
+}
+
+.map-info-value.text-danger { color: #f87171; }
+.map-info-value.text-warning { color: #fbbf24; }
+
+.map-info-unit {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #8eb9c4;
+  letter-spacing: 0.02em;
+}
+
+/* Animated bar track inside each card */
+.map-info-bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(130, 222, 244, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.map-info-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #38bdf8, #34d399);
+  transition: width 0.35s ease-out;
+}
+
+.map-info-bar-fill.bar-warning {
+  background: linear-gradient(90deg, #fbbf24, #fb923c);
+}
+.map-info-bar-fill.bar-danger {
+  background: linear-gradient(90deg, #f87171, #fb7185);
+}
+
+/* Data value animation on change */
+@keyframes value-pop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.06); }
+  60% { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}

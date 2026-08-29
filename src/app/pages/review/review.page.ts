@@ -1,7 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { ToastController, AlertController } from '@ionic/angular';
-import { Router } from '@angular/router';
 import { HazardSeverity, PotholeReport, TelemetryCluster } from '../../models/pothole-report.model';
 import { TelemetryService } from '../../services/telemetry.service';
 import { GrievanceShareService } from '../../services/grievance-share.service';
@@ -72,7 +71,6 @@ export class ReviewPage implements OnInit, OnDestroy {
     private readonly grievanceShare: GrievanceShareService,
     private readonly toastCtrl: ToastController,
     private readonly alertCtrl: AlertController,
-    private readonly router: Router,
     private readonly mapNavigation: MapNavigationService,
   ) {}
 
@@ -323,8 +321,6 @@ export class ReviewPage implements OnInit, OnDestroy {
       this.closeShareCard();
     }
   }
-
-  showOnMap(): void { void this.router.navigateByUrl('/map'); }
 
   exportRecords(format: 'json' | 'csv'): void {
     if (!this.rawReports.length) return;

@@ -1,4 +1,44 @@
+<ion-header class="ion-no-border review-spacer-header">
+  <ion-toolbar class="review-spacer-toolbar app-brand-toolbar">
+    <div class="brand-lockup" aria-label="BumpAlert app title">
+      <span class="brand-bump">Bump</span><span class="brand-alert">Alert</span>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
 <ion-content [fullscreen]="true" class="map-page-viewport">
+
+  <!-- Animated live telemetry cards pinned to top of map -->
+  <div class="map-info-overlay">
+
+    <div class="map-info-card" [class.card-pulse]="currentGForce >= 1.8">
+      <div class="map-info-label">SPEED</div>
+      <div class="map-info-value speed-value">
+        {{ currentSpeedKph !== null ? currentSpeedKph : '--' }}
+      </div>
+      <div class="map-info-unit">km/h</div>
+      <div class="map-info-bar-track">
+        <div class="map-info-bar-fill" [style.width.%]="currentSpeedKph !== null ? Math.min((currentSpeedKph / 120) * 100, 100) : 0"></div>
+      </div>
+    </div>
+
+    <div class="map-info-card" [class.card-pulse]="currentGForce >= 1.8" [class.card-danger]="currentGForce >= 3">
+      <div class="map-info-label">IMPACT</div>
+      <div class="map-info-value gforce-value"
+           [class.text-danger]="currentGForce >= 3"
+           [class.text-warning]="currentGForce >= 1.8 && currentGForce < 3">
+        {{ currentGForce.toFixed(1) }}
+      </div>
+      <div class="map-info-unit">g-force</div>
+      <div class="map-info-bar-track">
+        <div class="map-info-bar-fill" [style.width.%]="Math.min((currentGForce / 5) * 100, 100)"
+             [class.bar-warning]="currentGForce >= 1.8 && currentGForce < 3"
+             [class.bar-danger]="currentGForce >= 3"></div>
+      </div>
+    </div>
+
+  </div>
+
   <div class="map-render-canvas">
     <div #mapContainer class="map-dom-container"></div>
 
@@ -7,9 +47,4 @@
       <p>{{ mapLoadError }}</p>
     </div>
   </div>
-
-  <ion-button class="close-map-button" fill="solid" (click)="closeMap()">
-    <ion-icon slot="start" name="arrow-back-outline"></ion-icon>
-    Live Telemetry
-  </ion-button>
 </ion-content>

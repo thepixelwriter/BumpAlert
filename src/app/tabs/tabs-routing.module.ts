@@ -9,6 +9,10 @@ const routes: Routes = [
     children: [
       // Telemetry is intentionally the primary, default app experience.
       {
+        path: 'map',
+        loadChildren: () => import('../pages/map/map.module').then((m) => m.MapPageModule),
+      },
+      {
         path: 'telemetry',
         loadChildren: () => import('../pages/review/review.module').then((m) => m.ReviewPageModule),
       },
@@ -26,29 +30,29 @@ const routes: Routes = [
       // Backward-compatible aliases
       {
         path: 'dashboard',
-        redirectTo: '/tabs/telemetry',
+        redirectTo: '/tabs/map',
         pathMatch: 'full',
       },
       {
         path: 'detection',
-        redirectTo: '/tabs/telemetry',
+        redirectTo: '/tabs/map',
         pathMatch: 'full',
       },
       {
         path: 'trip-summary',
-        redirectTo: '/tabs/telemetry',
+        redirectTo: '/tabs/map',
         pathMatch: 'full',
       },
       {
         path: '',
-        redirectTo: '/tabs/telemetry',
+        redirectTo: '/tabs/map',
         pathMatch: 'full',
       },
     ],
   },
   {
     path: '',
-    redirectTo: '/tabs/telemetry',
+    redirectTo: '/tabs/map',
     pathMatch: 'full',
   },
 ];
