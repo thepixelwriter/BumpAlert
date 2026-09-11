@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface AuthUser {
   id: string;
@@ -20,7 +21,7 @@ export interface AuthResponse {
 export class AuthService {
   private readonly tokenKey = 'bumpalert_token';
   private readonly userKey = 'bumpalert_user';
-  private readonly apiUrl = 'http://localhost:3000/api';
+  private readonly apiUrl = environment.apiUrl;
 
   private currentUserSubject = new BehaviorSubject<AuthUser | null>(this.getStoredUser());
   readonly currentUser$ = this.currentUserSubject.asObservable();
