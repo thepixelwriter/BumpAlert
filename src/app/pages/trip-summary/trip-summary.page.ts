@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { SensorDetectionService } from '../../services/sensor-detection.service';
 import { HazardSubmissionPayload, PotholeReport } from '../../models/pothole-report.model';
+import { ReportApiService } from '../../services/report-api.service';
 
 /** View-model wrapper pairing a captured report with its checkbox selection state. */
 interface SelectableReport extends PotholeReport {
@@ -18,7 +19,10 @@ export class TripSummaryPage implements OnInit, OnDestroy {
   reports: SelectableReport[] = [];
   private reportsSub?: Subscription;
 
-  constructor(private readonly sensorDetection: SensorDetectionService) {}
+  constructor(
+    private readonly sensorDetection: SensorDetectionService,
+    private readonly reportApi: ReportApiService,
+  ) {}
 
   ngOnInit(): void {
     this.reportsSub = this.sensorDetection.pendingReports$.subscribe((reports) => {
@@ -70,8 +74,16 @@ export class TripSummaryPage implements OnInit, OnDestroy {
     this.sensorDetection.markSubmitted(selected.map((r) => r.id));
   }
 
-  /** Placeholder for the actual PWD/NHAI agency API integration. */
-  private async submitToAgency(_payload: HazardSubmissionPayload): Promise<void> {
-    return Promise.resolve();
+  private async submitToAgency(payload: HazardSubmissionPayload): Promise<void> {
+    await this.reportApi.submitReports({
+      submittedAt: payload.submittedAt,
+      hazards: payload.hazards.map((hazard) => ({
+        latitude: hazard.latitude,
+        longitude: hazard.longitude,
+        timestamp: hazard.timestamp,
+        severity: hazard.severity,
+        gForce: 0,
+      })),
+    }).toPromise();
   }
 }

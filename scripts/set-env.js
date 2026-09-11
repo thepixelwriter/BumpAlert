@@ -21,12 +21,14 @@ const apiKey =
   '';
 
 const runtimeEnvPath = path.join(__dirname, '../src/environments/environment.runtime.ts');
+const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
 
 if (apiKey && apiKey !== 'YOUR_GOOGLE_MAPS_API_KEY') {
   const runtimeContent = `// Generated locally from .env. Do not commit this file.
 export const environment = {
   production: false,
   googleMapsApiKey: '${apiKey}',
+  googleClientId: '${googleClientId}',
 };
 `;
 

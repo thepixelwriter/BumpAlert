@@ -1,0 +1,52 @@
+<ion-content class="ion-padding auth-page">
+  <div class="auth-shell">
+    <div class="brand-lockup">
+      <span class="brand-bump">Bump</span><span class="brand-alert">Alert</span>
+    </div>
+
+    <form [formGroup]="authForm" (ngSubmit)="submit()">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>{{ mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Forgot password' }}</ion-card-title>
+        </ion-card-header>
+
+        <ion-card-content>
+          <ion-item *ngIf="mode === 'register'">
+            <ion-label position="floating">Full name</ion-label>
+            <ion-input formControlName="name" type="text"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="floating">Email</ion-label>
+            <ion-input formControlName="email" type="email"></ion-input>
+          </ion-item>
+
+          <ion-item *ngIf="mode !== 'forgot'">
+            <ion-label position="floating">Password</ion-label>
+            <ion-input formControlName="password" type="password"></ion-input>
+          </ion-item>
+
+          <ion-button expand="block" class="ion-margin-top" type="submit" [disabled]="isSubmitting">
+            {{ mode === 'login' ? 'Login' : mode === 'register' ? 'Register' : 'Send reset email' }}
+          </ion-button>
+
+          <ion-button expand="block" fill="outline" class="ion-margin-top" type="button" (click)="continueWithGoogle()">
+            Continue with Google
+          </ion-button>
+
+          <div class="auth-links">
+            <ion-button fill="clear" size="small" type="button" (click)="switchMode('login')" *ngIf="mode !== 'login'">
+              Back to login
+            </ion-button>
+            <ion-button fill="clear" size="small" type="button" (click)="switchMode('register')" *ngIf="mode !== 'register'">
+              Create account
+            </ion-button>
+            <ion-button fill="clear" size="small" type="button" (click)="switchMode('forgot')" *ngIf="mode !== 'forgot'">
+              Forgot password
+            </ion-button>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </form>
+  </div>
+</ion-content>

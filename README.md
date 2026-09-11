@@ -9,7 +9,9 @@ BumpAlert is a mobile-first road hazard detection application that uses device m
 - Uses GPS speed, location accuracy, and elevation changes to improve detection confidence.
 - Continues detection through the native Android background detection service.
 - Displays live acceleration, gyroscope, compass, GPS, speed, and elevation telemetry.
-- Stores detected events locally for review.
+- Stores detected events locally for review and syncs user-scoped reports to the API.
+- Adds secure login, registration, forgot password, and Google sign-in.
+- Keeps anomaly records attached to the logged-in user and stores the payload in PostgreSQL.
 - Shows detected hazards and nearby reports on Google Maps.
 - Creates shareable anomaly cards with Google Street View imagery when available.
 - Falls back to Google satellite imagery when Street View coverage is unavailable.
@@ -79,12 +81,13 @@ git clone https://github.com/thepixelwriter/BumpAlert.git
 cd BumpAlert
 ```
 
-### Configure the Google Maps API key
+### Configure client environment
 
 Create a `.env` file in the client repository root:
 
 ```dotenv
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
 ```
 
 The build script reads this value and generates the local runtime environment file. Do not commit `.env` or generated runtime credentials.
@@ -107,6 +110,8 @@ npm start
 ```
 
 The local development app normally runs at `http://localhost:4200`.
+
+The app now starts on the auth screen and redirects to the secured dashboard after successful login or registration.
 
 To create a production build:
 

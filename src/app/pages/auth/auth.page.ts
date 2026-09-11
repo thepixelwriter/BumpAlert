@@ -1,0 +1,111 @@
+import { Component } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ToastController } from '@ionic/angular';
+import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
+import { AuthService } from '../../services/auth.service';
+
+@Component({
+  selector: 'app-auth',
+  templateUrl: './auth.page.html',
+  styleUrls: ['./auth.page.scss'],
+  standalone: false,
+})
+export class AuthPage {
+  mode: 'login' | 'register' | 'forgot' = 'login';
+  authForm: FormGroup;
+  isSubmitting = false;
+
+  constructor(
+    private readonly fb: FormBuilder,
+    private readonly auth: AuthService,
+    private readonly toastCtrl: ToastController,
+    private readonly router: Router,
+  ) {
+    this.authForm = this.fb.group({
+      name: ['', [Validators.minLength(2)]],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
+    });
+  }
+
+  switchMode(mode: 'login' | 'register' | 'forgot'): void {
+    this.mode = mode;
+    if (mode === 'forgot') {
+      this.authForm.get('password')?.clearValidators();
+      this.authForm.get('password')?.updateValueAndValidity();
+    } else {
+      this.authForm.get('password')?.setValidators([Validators.required, Validators.minLength(8)]);
+      this.authForm.get('password')?.updateValueAndValidity();
+    }
+
+    if (mode === 'register') {
+      this.authForm.get('name')?.setValidators([Validators.required, Validators.minLength(2)]);
+    } else {
+      this.authForm.get('name')?.clearValidators();
+    }
+    this.authForm.get('name')?.updateValueAndValidity();
+  }
+
+  async submit(): Promise<void> {
+    if (this.authForm.invalid) {
+      this.authForm.markAllAsTouched();
+      return;
+    }
+
+    this.isSubmitting = true;
+    const formValue = this.authForm.value;
+
+    try {
+      if (this.mode === 'register') {
+        await this.auth.register({ name: formValue.name, email: formValue.email, password: formValue.password }).toPromise();
+        this.showToast('Account created successfully');
+      } else if (this.mode === 'forgot') {
+        await this.auth.forgotPassword(formValue.email).toPromise();
+        this.showToast('If an account exists, a reset link has been prepared');
+        this.mode = 'login';
+      } else {
+        await this.auth.login({ email: formValue.email, password: formValue.password }).toPromise();
+        this.showToast('Welcome back');
+      }
+
+      await this.router.navigateByUrl('/tabs/map');
+    } catch (error) {
+      const message = (error as { error?: { error?: string } }).error?.error ?? 'Action failed';
+      this.showToast(message);
+    } finally {
+      this.isSubmitting = false;
+    }
+  }
+
+  async continueWithGoogle(): Promise<void> {
+    const googleClient = (window as typeof window & { google?: { accounts?: { id?: { initialize: (config: Record<string, unknown>) => void; prompt: () => void } } } }).google;
+    if (!googleClient?.accounts?.id) {
+      this.showToast('Google sign in is not configured');
+      return;
+    }
+
+    googleClient.accounts.id.initialize({
+      client_id: environment.googleClientId || 'YOUR_GOOGLE_CLIENT_ID',
+      callback: async (response: { credential?: string }) => {
+        if (!response.credential) {
+          return;
+        }
+        try {
+          await this.auth.googleLogin(response.credential).toPromise();
+          this.showToast('Google login successful');
+          await this.router.navigateByUrl('/tabs/map');
+        } catch (error) {
+          const message = (error as { error?: { error?: string } }).error?.error ?? 'Google login failed';
+          this.showToast(message);
+        }
+      },
+    });
+    googleClient.accounts.id.prompt();
+  }
+
+  private async showToast(message: string): Promise<void> {
+    const toast = await this.toastCtrl.create({ message, duration: 2200, position: 'bottom' });
+    await toast.present();
+  }
+}
