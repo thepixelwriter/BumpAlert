@@ -1,52 +1,53 @@
-<ion-content class="ion-padding auth-page">
+<ion-content class="auth-page">
   <div class="auth-shell">
-    <div class="brand-lockup">
-      <span class="brand-bump">Bump</span><span class="brand-alert">Alert</span>
+    <div class="brand-lockup" aria-label="BumpAlert">
+      <span class="brand-mark">BA</span>
+      <span class="brand-name"><span class="brand-bump">Bump</span><span class="brand-alert">Alert</span></span>
     </div>
 
-    <form [formGroup]="authForm" (ngSubmit)="submit()">
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>{{ mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Forgot password' }}</ion-card-title>
-        </ion-card-header>
+    <form class="auth-card" [formGroup]="authForm" (ngSubmit)="submit()">
+      <div class="auth-heading">
+        <p class="eyebrow">ROAD AWARENESS, SIMPLIFIED</p>
+        <h1>{{ mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : 'Reset your password' }}</h1>
+        <p class="subtitle">
+          {{ mode === 'login' ? 'Sign in to keep your reports in sync.' : mode === 'register' ? 'Start building a clearer picture of the roads around you.' : 'Enter your email and we will prepare a reset link.' }}
+        </p>
+      </div>
 
-        <ion-card-content>
-          <ion-item *ngIf="mode === 'register'">
-            <ion-label position="floating">Full name</ion-label>
-            <ion-input formControlName="name" type="text"></ion-input>
-          </ion-item>
+      <div class="auth-fields">
+        <ion-item class="auth-field" lines="none" *ngIf="mode === 'register'">
+          <ion-label position="floating">Full name</ion-label>
+          <ion-input formControlName="name" type="text" autocomplete="name"></ion-input>
+        </ion-item>
 
-          <ion-item>
-            <ion-label position="floating">Email</ion-label>
-            <ion-input formControlName="email" type="email"></ion-input>
-          </ion-item>
+        <ion-item class="auth-field" lines="none">
+          <ion-label position="floating">Email address</ion-label>
+          <ion-input formControlName="email" type="email" autocomplete="email"></ion-input>
+        </ion-item>
 
-          <ion-item *ngIf="mode !== 'forgot'">
-            <ion-label position="floating">Password</ion-label>
-            <ion-input formControlName="password" type="password"></ion-input>
-          </ion-item>
+        <ion-item class="auth-field" lines="none" *ngIf="mode !== 'forgot'">
+          <ion-label position="floating">Password</ion-label>
+          <ion-input formControlName="password" type="password" [autocomplete]="mode === 'register' ? 'new-password' : 'current-password'"></ion-input>
+        </ion-item>
+      </div>
 
-          <ion-button expand="block" class="ion-margin-top" type="submit" [disabled]="isSubmitting">
-            {{ mode === 'login' ? 'Login' : mode === 'register' ? 'Register' : 'Send reset email' }}
-          </ion-button>
+      <ion-button expand="block" class="primary-action" type="submit" [disabled]="isSubmitting">
+        {{ mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Send reset link' }}
+      </ion-button>
 
-          <ion-button expand="block" fill="outline" class="ion-margin-top" type="button" (click)="continueWithGoogle()">
-            Continue with Google
-          </ion-button>
+      <div class="auth-divider" *ngIf="mode !== 'forgot'"><span>or continue with</span></div>
+      <ion-button expand="block" fill="outline" class="google-action" type="button" (click)="continueWithGoogle()" *ngIf="mode !== 'forgot'">
+        <span class="google-g" aria-hidden="true">G</span>
+        Continue with Google
+      </ion-button>
 
-          <div class="auth-links">
-            <ion-button fill="clear" size="small" type="button" (click)="switchMode('login')" *ngIf="mode !== 'login'">
-              Back to login
-            </ion-button>
-            <ion-button fill="clear" size="small" type="button" (click)="switchMode('register')" *ngIf="mode !== 'register'">
-              Create account
-            </ion-button>
-            <ion-button fill="clear" size="small" type="button" (click)="switchMode('forgot')" *ngIf="mode !== 'forgot'">
-              Forgot password
-            </ion-button>
-          </div>
-        </ion-card-content>
-      </ion-card>
+      <div class="auth-links">
+        <ion-button fill="clear" size="small" type="button" (click)="switchMode('login')" *ngIf="mode !== 'login'">Back to sign in</ion-button>
+        <ion-button fill="clear" size="small" type="button" (click)="switchMode('register')" *ngIf="mode !== 'register'">Create account</ion-button>
+        <ion-button fill="clear" size="small" type="button" (click)="switchMode('forgot')" *ngIf="mode !== 'forgot'">Forgot password?</ion-button>
+      </div>
     </form>
+
+    <p class="auth-footer">BumpAlert <span>•</span> safer roads through shared signals</p>
   </div>
 </ion-content>
