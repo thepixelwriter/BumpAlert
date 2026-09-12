@@ -39,6 +39,10 @@
         {{ mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Send reset link' }}
       </ion-button>
 
+      <ion-button expand="block" fill="clear" class="reset-token-action" type="button" (click)="continueToResetPage()" *ngIf="mode === 'forgot'">
+        I have a reset token
+      </ion-button>
+
       <div class="auth-divider" *ngIf="mode !== 'forgot'"><span>or continue with</span></div>
       <ion-button expand="block" fill="outline" class="google-action" type="button" (click)="continueWithGoogle()" *ngIf="mode !== 'forgot'">
         <span class="google-g" aria-hidden="true">G</span>

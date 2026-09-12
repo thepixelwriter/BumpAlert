@@ -8,6 +8,10 @@ const routes: Routes = [
     loadChildren: () => import('./pages/auth/auth.module').then((m) => m.AuthPageModule),
   },
   {
+    path: 'reset-password',
+    loadChildren: () => import('./pages/reset-password/reset-password.module').then((m) => m.ResetPasswordPageModule),
+  },
+  {
     path: 'map',
     redirectTo: '/tabs/map',
     pathMatch: 'full',

@@ -66,8 +66,10 @@ export class AuthPage {
         this.showToast('Account created successfully');
       } else if (this.mode === 'forgot') {
         await this.auth.forgotPassword(formValue.email).toPromise();
-        this.showToast('If an account exists, a reset link has been prepared');
-        this.mode = 'login';
+        this.showToast('If an account exists, check your email for a reset link');
+        this.authForm.reset();
+        this.switchMode('login');
+        return;
       } else {
         await this.auth.login({ email: formValue.email, password: formValue.password }).toPromise();
         this.showToast('Welcome back');
@@ -87,6 +89,10 @@ export class AuthPage {
   hasError(controlName: string, error: string): boolean {
     const control = this.authForm.get(controlName);
     return !!control && control.touched && control.hasError(error);
+  }
+
+  async continueToResetPage(): Promise<void> {
+    await this.router.navigateByUrl('/reset-password');
   }
 
   async continueWithGoogle(): Promise<void> {
