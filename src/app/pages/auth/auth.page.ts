@@ -15,6 +15,7 @@ export class AuthPage {
   mode: 'login' | 'register' | 'forgot' = 'login';
   authForm: FormGroup;
   isSubmitting = false;
+  submitError = '';
 
   constructor(
     private readonly fb: FormBuilder,
@@ -31,6 +32,7 @@ export class AuthPage {
 
   switchMode(mode: 'login' | 'register' | 'forgot'): void {
     this.mode = mode;
+    this.submitError = '';
     if (mode === 'forgot') {
       this.authForm.get('password')?.clearValidators();
       this.authForm.get('password')?.updateValueAndValidity();
@@ -50,10 +52,12 @@ export class AuthPage {
   async submit(): Promise<void> {
     if (this.authForm.invalid) {
       this.authForm.markAllAsTouched();
+      this.submitError = 'Please correct the highlighted fields before continuing.';
       return;
     }
 
     this.isSubmitting = true;
+    this.submitError = '';
     const formValue = this.authForm.value;
 
     try {
@@ -71,11 +75,18 @@ export class AuthPage {
 
       await this.router.navigateByUrl('/tabs/map');
     } catch (error) {
-      const message = (error as { error?: { error?: string } }).error?.error ?? 'Action failed';
+      const responseError = (error as { error?: { error?: string } | string }).error;
+      const message = typeof responseError === 'string' ? responseError : responseError?.error ?? 'Action failed';
+      this.submitError = message;
       this.showToast(message);
     } finally {
       this.isSubmitting = false;
     }
+  }
+
+  hasError(controlName: string, error: string): boolean {
+    const control = this.authForm.get(controlName);
+    return !!control && control.touched && control.hasError(error);
   }
 
   async continueWithGoogle(): Promise<void> {

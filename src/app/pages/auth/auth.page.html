@@ -1,11 +1,10 @@
 <ion-content class="auth-page">
   <div class="auth-shell">
     <div class="brand-lockup" aria-label="BumpAlert">
-      <span class="brand-mark">BA</span>
       <span class="brand-name"><span class="brand-bump">Bump</span><span class="brand-alert">Alert</span></span>
     </div>
 
-    <form class="auth-card" [formGroup]="authForm" (ngSubmit)="submit()">
+    <form class="auth-card" [formGroup]="authForm" (ngSubmit)="submit()" autocomplete="off" novalidate>
       <div class="auth-heading">
         <p class="eyebrow">ROAD AWARENESS, SIMPLIFIED</p>
         <h1>{{ mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : 'Reset your password' }}</h1>
@@ -15,21 +14,26 @@
       </div>
 
       <div class="auth-fields">
-        <ion-item class="auth-field" lines="none" *ngIf="mode === 'register'">
-          <ion-label position="floating">Full name</ion-label>
-          <ion-input formControlName="name" type="text" autocomplete="name"></ion-input>
+        <ion-item class="auth-field" [class.field-invalid]="hasError('name', 'required') || hasError('name', 'minlength')" lines="none" *ngIf="mode === 'register'">
+          <ion-input formControlName="name" type="text" placeholder="Full name" autocomplete="off" name="new-account-name"></ion-input>
         </ion-item>
+        <ion-note class="field-error" *ngIf="hasError('name', 'required')">Your name is required.</ion-note>
+        <ion-note class="field-error" *ngIf="hasError('name', 'minlength')">Use at least 2 characters.</ion-note>
 
-        <ion-item class="auth-field" lines="none">
-          <ion-label position="floating">Email address</ion-label>
-          <ion-input formControlName="email" type="email" autocomplete="email"></ion-input>
+        <ion-item class="auth-field" [class.field-invalid]="hasError('email', 'required') || hasError('email', 'email')" lines="none">
+          <ion-input formControlName="email" type="email" placeholder="Email address" autocomplete="off" name="auth-email"></ion-input>
         </ion-item>
+        <ion-note class="field-error" *ngIf="hasError('email', 'required')">Email address is required.</ion-note>
+        <ion-note class="field-error" *ngIf="hasError('email', 'email')">Enter a valid email address.</ion-note>
 
-        <ion-item class="auth-field" lines="none" *ngIf="mode !== 'forgot'">
-          <ion-label position="floating">Password</ion-label>
-          <ion-input formControlName="password" type="password" [autocomplete]="mode === 'register' ? 'new-password' : 'current-password'"></ion-input>
+        <ion-item class="auth-field" [class.field-invalid]="hasError('password', 'required') || hasError('password', 'minlength')" lines="none" *ngIf="mode !== 'forgot'">
+          <ion-input formControlName="password" type="password" placeholder="Password" autocomplete="new-password" name="new-account-password"></ion-input>
         </ion-item>
+        <ion-note class="field-error" *ngIf="hasError('password', 'required')">Password is required.</ion-note>
+        <ion-note class="field-error" *ngIf="hasError('password', 'minlength')">Use at least 8 characters.</ion-note>
       </div>
+
+      <div class="submit-error" role="alert" *ngIf="submitError">{{ submitError }}</div>
 
       <ion-button expand="block" class="primary-action" type="submit" [disabled]="isSubmitting">
         {{ mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : 'Send reset link' }}
@@ -42,9 +46,10 @@
       </ion-button>
 
       <div class="auth-links">
-        <ion-button fill="clear" size="small" type="button" (click)="switchMode('login')" *ngIf="mode !== 'login'">Back to sign in</ion-button>
-        <ion-button fill="clear" size="small" type="button" (click)="switchMode('register')" *ngIf="mode !== 'register'">Create account</ion-button>
-        <ion-button fill="clear" size="small" type="button" (click)="switchMode('forgot')" *ngIf="mode !== 'forgot'">Forgot password?</ion-button>
+        <ion-button fill="clear" size="small" type="button" (click)="switchMode('login')" *ngIf="mode === 'register'">Already have an account? Sign in</ion-button>
+        <ion-button fill="clear" size="small" type="button" (click)="switchMode('register')" *ngIf="mode === 'login'">Create an account</ion-button>
+        <ion-button fill="clear" size="small" type="button" (click)="switchMode('forgot')" *ngIf="mode === 'login'">Forgot password?</ion-button>
+        <ion-button fill="clear" size="small" type="button" (click)="switchMode('login')" *ngIf="mode === 'forgot'">Back to sign in</ion-button>
       </div>
     </form>
 
