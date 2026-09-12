@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ToastController } from '@ionic/angular';
 import { Router } from '@angular/router';
@@ -11,7 +11,7 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./auth.page.scss'],
   standalone: false,
 })
-export class AuthPage {
+export class AuthPage implements OnInit {
   mode: 'login' | 'register' | 'forgot' = 'login';
   authForm: FormGroup;
   isSubmitting = false;
@@ -28,6 +28,12 @@ export class AuthPage {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
     });
+  }
+
+  ngOnInit(): void {
+    if (this.auth.isAuthenticated()) {
+      this.router.navigateByUrl('/tabs/map');
+    }
   }
 
   switchMode(mode: 'login' | 'register' | 'forgot'): void {
