@@ -1,3 +1,17 @@
+.custom-tab-bar,
+ion-tabs {
+  width: 100%;
+  max-width: 430px;
+  margin-inline: auto;
+}
+
+ion-tabs {
+  display: block;
+  min-height: 100%;
+  border-inline: 1px solid rgba(var(--ion-text-color-rgb), 0.06);
+  box-shadow: 0 0 42px rgba(0, 0, 0, 0.18);
+}
+
 .custom-tab-bar {
   --background: rgba(var(--ion-background-color-rgb), 0.88);
   backdrop-filter: blur(20px);
