@@ -12,25 +12,25 @@
   <div class="map-info-overlay" *ngIf="!searchPanelOpen" [class.navigation-active]="navigating">
 
     <div class="map-info-card" [class.card-pulse]="currentGForce >= 1.8">
-      <div class="map-info-label">SPEED</div>
-      <div class="map-info-value speed-value">
+      <div class="map-info-label metric-label">SPEED</div>
+      <div class="map-info-value speed-value metric-value">
         {{ currentSpeedKph !== null ? currentSpeedKph : '--' }}
       </div>
-      <div class="map-info-unit">km/h</div>
-      <div class="map-info-bar-track">
+      <div class="map-info-unit metric-unit">km/h</div>
+      <div class="map-info-bar-track metric-bar">
         <div class="map-info-bar-fill" [style.width.%]="currentSpeedKph !== null ? Math.min((currentSpeedKph / 120) * 100, 100) : 0"></div>
       </div>
     </div>
 
     <div class="map-info-card" [class.card-pulse]="currentGForce >= 1.8" [class.card-danger]="currentGForce >= 3">
-      <div class="map-info-label">IMPACT</div>
-      <div class="map-info-value gforce-value"
+      <div class="map-info-label metric-label">IMPACT</div>
+      <div class="map-info-value gforce-value metric-value"
            [class.text-danger]="currentGForce >= 3"
            [class.text-warning]="currentGForce >= 1.8 && currentGForce < 3">
         {{ currentGForce.toFixed(1) }}
       </div>
-      <div class="map-info-unit">g-force</div>
-      <div class="map-info-bar-track">
+      <div class="map-info-unit metric-unit">g-force</div>
+      <div class="map-info-bar-track metric-bar">
         <div class="map-info-bar-fill" [style.width.%]="Math.min((currentGForce / 5) * 100, 100)"
              [class.bar-warning]="currentGForce >= 1.8 && currentGForce < 3"
              [class.bar-danger]="currentGForce >= 3"></div>
@@ -223,7 +223,7 @@
         <strong>{{ arrivedAtDestination ? 'Arrived' : (remainingDurationSeconds / 60 | number: '1.0-0') + ' min' }}</strong>
         <span>{{ arrivedAtDestination ? selectedTo?.label : formattedRemainingDistance + ' remaining' }}</span>
       </div>
-      <div class="trip-eta">
+      <div class="trip-eta" aria-label="Estimated arrival time">
         <span>ETA</span>
         <strong>{{ arrivedAtDestination ? 'Now' : formattedArrivalTime }}</strong>
       </div>

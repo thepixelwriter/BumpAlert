@@ -13,6 +13,7 @@ import { GeocodeResult, RouteResult, RouteStep } from '../../models/map.model';
 
 const DEFAULT_CENTER = { latitude: 28.4328, longitude: 77.5035 };
 const DEFAULT_ZOOM = 17;
+const NAVIGATION_ZOOM = 19;
 const SEARCH_DEBOUNCE_MS = 400;
 const NAVIGATION_MAP_STYLES: google.maps.MapTypeStyle[] = [
   { elementType: 'geometry', stylers: [{ color: '#073f4d' }] },
@@ -846,7 +847,9 @@ export class MapPage implements OnInit, OnDestroy {
     this.searchPanelOpen = false;
     if (this.lastKnownPosition) {
       this.updateCurrentLocation(this.lastKnownPosition.latitude, this.lastKnownPosition.longitude);
-      this.map?.panTo({ lat: this.lastKnownPosition.latitude, lng: this.lastKnownPosition.longitude });
+      const currentPosition = { lat: this.lastKnownPosition.latitude, lng: this.lastKnownPosition.longitude };
+      this.map?.setCenter(currentPosition);
+      this.map?.setZoom(NAVIGATION_ZOOM);
     }
     this.updateNavigationProgress();
     this.announceNavigationInstruction();
@@ -947,11 +950,12 @@ export class MapPage implements OnInit, OnDestroy {
 
   get maneuverIcon(): string {
     const maneuver = this.activeNavigationStep?.maneuver ?? '';
-    if (maneuver.includes('roundabout')) return 'sync';
-    if (maneuver.includes('uturn') || maneuver.includes('left')) return 'arrow-back';
-    if (maneuver.includes('right')) return 'arrow-forward';
-    if (maneuver.includes('merge') || maneuver.includes('fork')) return 'git-merge';
     if (maneuver.includes('destination')) return 'flag';
+    if (maneuver.includes('uturn')) return 'refresh';
+    if (maneuver.includes('roundabout')) return 'sync';
+    if (maneuver.includes('merge') || maneuver.includes('fork')) return 'git-merge';
+    if (maneuver.includes('left')) return 'return-up-back';
+    if (maneuver.includes('right')) return 'return-up-forward';
     return 'arrow-up';
   }
 
