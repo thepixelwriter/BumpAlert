@@ -97,6 +97,12 @@ h1 {
   font-size: 0.9rem;
 }
 
+.password-toggle {
+  --color: #ffe45c;
+  margin-inline: 0;
+  font-size: 0.72rem;
+}
+
 .field-invalid {
   --border-color: #ff8c78;
   --highlight-color-focused: #ff8c78;

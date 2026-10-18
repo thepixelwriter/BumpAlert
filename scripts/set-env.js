@@ -24,18 +24,18 @@ const runtimeEnvPath = path.join(__dirname, '../src/environments/environment.run
 const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
 const apiUrl = process.env.BACKEND_API_URL || 'https://api.bumpalert.thepixelwriter.com/api';
 
-if (apiKey && apiKey !== 'YOUR_GOOGLE_MAPS_API_KEY') {
-  const runtimeContent = `// Generated locally from .env. Do not commit this file.
-export const environment = {
+const runtimeContent = `// Generated locally from environment variables. Do not commit this file.
+export const environment = ${JSON.stringify({
   production: false,
-  googleMapsApiKey: '${apiKey}',
-  googleClientId: '${googleClientId}',
-  apiUrl: '${apiUrl}',
-};
+  googleMapsApiKey: apiKey === 'YOUR_GOOGLE_MAPS_API_KEY' ? '' : apiKey,
+  googleClientId,
+  apiUrl,
+}, null, 2)};
 `;
 
-  fs.writeFileSync(runtimeEnvPath, runtimeContent, 'utf8');
+fs.writeFileSync(runtimeEnvPath, runtimeContent, 'utf8');
+if (apiKey && apiKey !== 'YOUR_GOOGLE_MAPS_API_KEY') {
   console.log('Generated local Maps configuration from .env.');
 } else {
-  console.log('No valid GOOGLE_MAPS_API_KEY found in .env or process.env.');
+  console.log('Generated runtime configuration without a Maps key; Maps features require GOOGLE_MAPS_API_KEY.');
 }

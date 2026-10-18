@@ -15,6 +15,8 @@ export class ResetPasswordPage {
   token = '';
   isSubmitting = false;
   submitError = '';
+  showPassword = false;
+  showConfirmPassword = false;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -52,8 +54,10 @@ export class ResetPasswordPage {
       await this.showToast('Password updated. You can sign in now.');
       await this.router.navigateByUrl('/auth');
     } catch (error) {
-      const responseError = (error as { error?: { error?: string } | string }).error;
-      this.submitError = typeof responseError === 'string' ? responseError : responseError?.error ?? 'Password reset failed';
+      const responseError = (error as { error?: { error?: string } | string; message?: string }).error;
+      this.submitError = typeof responseError === 'string'
+        ? responseError
+        : responseError?.error ?? (error as { message?: string }).message ?? 'Password reset failed';
     } finally {
       this.isSubmitting = false;
     }

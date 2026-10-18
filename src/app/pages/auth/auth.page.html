@@ -4,7 +4,7 @@
       <span class="brand-name"><span class="brand-bump">Bump</span><span class="brand-alert">Alert</span></span>
     </div>
 
-    <form class="auth-card" [formGroup]="authForm" (ngSubmit)="submit()" autocomplete="off" novalidate>
+    <form class="auth-card" [formGroup]="authForm" (ngSubmit)="submit()" autocomplete="on" novalidate>
       <div class="auth-heading">
         <p class="eyebrow">ROAD AWARENESS, SIMPLIFIED</p>
         <h1>{{ mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : 'Reset your password' }}</h1>
@@ -15,19 +15,22 @@
 
       <div class="auth-fields">
         <ion-item class="auth-field" [class.field-invalid]="hasError('name', 'required') || hasError('name', 'minlength')" lines="none" *ngIf="mode === 'register'">
-          <ion-input formControlName="name" type="text" placeholder="Full name" autocomplete="off" name="new-account-name"></ion-input>
+          <ion-input formControlName="name" type="text" placeholder="Full name" autocomplete="name" name="name" aria-label="Full name"></ion-input>
         </ion-item>
         <ion-note class="field-error" *ngIf="hasError('name', 'required')">Your name is required.</ion-note>
         <ion-note class="field-error" *ngIf="hasError('name', 'minlength')">Use at least 2 characters.</ion-note>
 
         <ion-item class="auth-field" [class.field-invalid]="hasError('email', 'required') || hasError('email', 'email')" lines="none">
-          <ion-input formControlName="email" type="email" placeholder="Email address" autocomplete="off" name="auth-email"></ion-input>
+          <ion-input formControlName="email" type="email" placeholder="Email address" autocomplete="email" name="email" aria-label="Email address"></ion-input>
         </ion-item>
         <ion-note class="field-error" *ngIf="hasError('email', 'required')">Email address is required.</ion-note>
         <ion-note class="field-error" *ngIf="hasError('email', 'email')">Enter a valid email address.</ion-note>
 
         <ion-item class="auth-field" [class.field-invalid]="hasError('password', 'required') || hasError('password', 'minlength')" lines="none" *ngIf="mode !== 'forgot'">
-          <ion-input formControlName="password" type="password" placeholder="Password" autocomplete="new-password" name="new-account-password"></ion-input>
+          <ion-input formControlName="password" [type]="showPassword ? 'text' : 'password'" placeholder="Password" [autocomplete]="mode === 'login' ? 'current-password' : 'new-password'" name="password" aria-label="Password"></ion-input>
+          <ion-button slot="end" fill="clear" class="password-toggle" type="button" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'" [attr.aria-pressed]="showPassword" (click)="showPassword = !showPassword">
+            {{ showPassword ? 'Hide' : 'Show' }}
+          </ion-button>
         </ion-item>
         <ion-note class="field-error" *ngIf="hasError('password', 'required')">Password is required.</ion-note>
         <ion-note class="field-error" *ngIf="hasError('password', 'minlength')">Use at least 8 characters.</ion-note>

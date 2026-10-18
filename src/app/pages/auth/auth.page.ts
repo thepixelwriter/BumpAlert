@@ -16,6 +16,7 @@ export class AuthPage implements OnInit {
   authForm: FormGroup;
   isSubmitting = false;
   submitError = '';
+  showPassword = false;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -39,6 +40,9 @@ export class AuthPage implements OnInit {
   switchMode(mode: 'login' | 'register' | 'forgot'): void {
     this.mode = mode;
     this.submitError = '';
+    this.showPassword = false;
+    this.authForm.markAsPristine();
+    this.authForm.markAsUntouched();
     if (mode === 'forgot') {
       this.authForm.get('password')?.clearValidators();
       this.authForm.get('password')?.updateValueAndValidity();
@@ -83,8 +87,10 @@ export class AuthPage implements OnInit {
 
       await this.router.navigateByUrl('/tabs/map');
     } catch (error) {
-      const responseError = (error as { error?: { error?: string } | string }).error;
-      const message = typeof responseError === 'string' ? responseError : responseError?.error ?? 'Action failed';
+      const responseError = (error as { error?: { error?: string } | string; message?: string }).error;
+      const message = typeof responseError === 'string'
+        ? responseError
+        : responseError?.error ?? (error as { message?: string }).message ?? 'Action failed';
       this.submitError = message;
       this.showToast(message);
     } finally {
@@ -102,14 +108,19 @@ export class AuthPage implements OnInit {
   }
 
   async continueWithGoogle(): Promise<void> {
+    if (!environment.googleClientId) {
+      await this.showToast('Google sign in is not configured');
+      return;
+    }
+
     const googleClient = (window as typeof window & { google?: { accounts?: { id?: { initialize: (config: Record<string, unknown>) => void; prompt: () => void } } } }).google;
     if (!googleClient?.accounts?.id) {
-      this.showToast('Google sign in is not configured');
+      await this.showToast('Google sign in could not be loaded. Please try again later.');
       return;
     }
 
     googleClient.accounts.id.initialize({
-      client_id: environment.googleClientId || 'YOUR_GOOGLE_CLIENT_ID',
+      client_id: environment.googleClientId,
       callback: async (response: { credential?: string }) => {
         if (!response.credential) {
           return;
@@ -119,8 +130,11 @@ export class AuthPage implements OnInit {
           this.showToast('Google login successful');
           await this.router.navigateByUrl('/tabs/map');
         } catch (error) {
-          const message = (error as { error?: { error?: string } }).error?.error ?? 'Google login failed';
-          this.showToast(message);
+          const responseError = (error as { error?: { error?: string } | string; message?: string }).error;
+          const message = typeof responseError === 'string'
+            ? responseError
+            : responseError?.error ?? (error as { message?: string }).message ?? 'Google login failed';
+          await this.showToast(message);
         }
       },
     });

@@ -107,6 +107,31 @@ ion-toolbar {
   --border-color: rgba(var(--ion-text-color-rgb), 0.06);
 }
 
+/* Keep feedback overlays readable regardless of the active app theme. */
+ion-toast {
+  --background: #f8fafc;
+  --color: #11151d;
+  --button-color: #604600;
+  --border-radius: 12px;
+  --box-shadow: 0 8px 28px rgba(0, 0, 0, 0.42);
+}
+
+ion-toast::part(container) {
+  border: 1px solid rgba(17, 21, 29, 0.18);
+}
+
+ion-toast::part(message) {
+  color: #11151d;
+  font-weight: 600;
+}
+
+ion-alert {
+  --background: #f8fafc;
+  --color: #11151d;
+  --button-color: #604600;
+  --backdrop-opacity: 0.72;
+}
+
 body.day-mode ion-toolbar,
 body.day-mode ion-tab-bar {
   --background: rgba(244, 247, 248, 0.94);
