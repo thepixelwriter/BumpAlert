@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ToastController } from '@ionic/angular';
 import { Router } from '@angular/router';
@@ -88,9 +89,11 @@ export class AuthPage implements OnInit {
       await this.router.navigateByUrl('/tabs/telemetry');
     } catch (error) {
       const responseError = (error as { error?: { error?: string } | string; message?: string }).error;
-      const message = typeof responseError === 'string'
-        ? responseError
-        : responseError?.error ?? (error as { message?: string }).message ?? 'Action failed';
+      const message = error instanceof HttpErrorResponse && [502, 503, 504].includes(error.status)
+        ? 'The authentication service is temporarily unavailable. Please try again shortly.'
+        : typeof responseError === 'string'
+          ? responseError
+          : responseError?.error ?? (error as { message?: string }).message ?? 'Action failed';
       this.submitError = message;
       this.showToast(message);
     } finally {

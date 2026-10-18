@@ -19,6 +19,10 @@ BumpAlert is a mobile-first road hazard detection application that uses device m
 - Supports light and dark display modes.
 - Includes a service worker and Cloudflare Pages deployment configuration.
 
+## Distribution direction
+
+The current hosted PWA is transitional. The planned release model is native Android and iOS apps that call the API directly. In the future, `bumpalert.thepixelwriter.com` will become a landing page linking to Google Play and the Apple App Store rather than hosting the app. Until that transition is complete, keep the existing web app and its API CORS origin available.
+
 ## Tech Stack
 
 Client

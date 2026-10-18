@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { BehaviorSubject, Observable, retry, tap, throwError, timer } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface AuthUser {
@@ -44,6 +44,12 @@ export class AuthService {
 
   login(data: { email: string; password: string }): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, data).pipe(
+      retry({
+        count: 1,
+        delay: (error: unknown) => error instanceof HttpErrorResponse && [502, 503, 504].includes(error.status)
+          ? timer(750)
+          : throwError(() => error),
+      }),
       tap((res) => this.storeSession(res)),
     );
   }

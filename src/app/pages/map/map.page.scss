@@ -1235,7 +1235,7 @@
 .map-info-overlay {
   position: absolute;
   top: auto;
-  bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(94px + env(safe-area-inset-bottom, 0px));
   left: 12px;
   right: 12px;
   display: flex;
@@ -1245,7 +1245,7 @@
 }
 
 .map-info-overlay.navigation-active {
-  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(94px + env(safe-area-inset-bottom, 0px));
 }
 
 .map-info-card {
