@@ -1,27 +1,23 @@
 const fs = require('fs');
 const path = require('path');
 
-// 1. Read from .env file if it exists locally
-let envKey = '';
+// Prefer local .env values for developer builds; CI supplies the same values as variables.
 const envFilePath = path.join(__dirname, '../.env');
-if (fs.existsSync(envFilePath)) {
-  const content = fs.readFileSync(envFilePath, 'utf8');
-  const match = content.match(/^GOOGLE_MAPS_API_KEY\s*=\s*["']?([^"'\r\n]+)["']?/m);
-  if (match && match[1]) {
-    envKey = match[1].trim();
-  }
-}
+const localEnv = fs.existsSync(envFilePath) ? fs.readFileSync(envFilePath, 'utf8') : '';
+const readLocalValue = (name) => {
+  const match = localEnv.match(new RegExp(`^${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\r\\n#]*))\\s*(?:#.*)?$`, 'm'));
+  return (match?.[1] ?? match?.[2] ?? match?.[3] ?? '').trim();
+};
 
-// 2. Fall back to process.env variables (e.g. in CI/CD, GitHub Actions, Cloudflare)
 const apiKey =
-  envKey ||
+  readLocalValue('GOOGLE_MAPS_API_KEY') ||
   process.env.GOOGLE_MAPS_API_KEY ||
   process.env.MAPS_API_KEY ||
   process.env.GOOGLE_MAPS_KEY ||
   '';
 
 const runtimeEnvPath = path.join(__dirname, '../src/environments/environment.runtime.ts');
-const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+const googleClientId = readLocalValue('GOOGLE_CLIENT_ID') || process.env.GOOGLE_CLIENT_ID || '';
 const apiUrl = process.env.BACKEND_API_URL || 'https://api.bumpalert.thepixelwriter.com/api';
 
 const runtimeContent = `// Generated locally from environment variables. Do not commit this file.

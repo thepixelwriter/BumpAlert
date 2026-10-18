@@ -8,8 +8,8 @@
 
 <ion-content [fullscreen]="true" class="map-page-viewport">
 
-  <!-- Animated live telemetry cards pinned to top of map -->
-  <div class="map-info-overlay">
+  <!-- Live telemetry cards stay above the footer and trip controls. -->
+  <div class="map-info-overlay" *ngIf="!searchPanelOpen" [class.navigation-active]="navigating">
 
     <div class="map-info-card" [class.card-pulse]="currentGForce >= 1.8">
       <div class="map-info-label">SPEED</div>
@@ -47,4 +47,200 @@
       <p>{{ mapLoadError }}</p>
     </div>
   </div>
+
+  <button
+    type="button"
+    class="directions-launch"
+    *ngIf="!searchPanelOpen && !navigating"
+    (click)="toggleSearchPanel()"
+    aria-label="Plan a route"
+  >
+    <ion-icon name="navigate-outline"></ion-icon>
+    <span>Directions</span>
+  </button>
+
+  <section class="route-planner-panel" *ngIf="searchPanelOpen && !navigating" aria-label="Route planner">
+    <header class="route-planner-header">
+      <div>
+        <span class="route-panel-eyebrow">{{ routeCalculated ? 'ROUTE OPTIONS' : 'BUMPALERT NAVIGATION' }}</span>
+        <h2>{{ routeCalculated ? 'Choose your route' : 'Where to?' }}</h2>
+      </div>
+      <button type="button" class="route-panel-close" (click)="toggleSearchPanel()" aria-label="Close route planner">
+        <ion-icon name="close-outline"></ion-icon>
+      </button>
+    </header>
+
+    <div class="route-panel-scroll">
+      <div class="route-search-field">
+        <span class="route-origin-dot" aria-hidden="true"></span>
+        <span class="route-origin-label">Your current location</span>
+      </div>
+      <label class="route-search-field destination-field">
+        <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
+        <input
+          type="search"
+          aria-label="Search destination"
+          placeholder="Search destination"
+          autocomplete="off"
+          [value]="toText"
+          (input)="onToInput($any($event.target).value)"
+        />
+        <button type="button" *ngIf="toText" (click)="onToInput('')" aria-label="Clear destination">
+          <ion-icon name="close-circle"></ion-icon>
+        </button>
+      </label>
+
+      <div class="route-suggestions" *ngIf="toResults.length > 0">
+        <button type="button" class="route-suggestion" *ngFor="let result of toResults" (click)="selectTo(result)">
+          <ion-icon name="time-outline"></ion-icon>
+          <span>{{ result.label }}</span>
+        </button>
+      </div>
+
+      <p class="route-error" *ngIf="routingError" role="alert">{{ routingError }}</p>
+      <p class="route-hint" *ngIf="searchMessage && !routingError">{{ searchMessage }}</p>
+
+      <div class="route-choice-list" *ngIf="routeCalculated">
+        <label class="route-choice-heading" for="route-choice-select">
+          <span>Available routes</span>
+          <span>{{ routeOptions.length }} {{ routeOptions.length === 1 ? 'option' : 'options' }}</span>
+        </label>
+        <div class="route-select-wrap">
+          <select
+            id="route-choice-select"
+            class="route-choice-select"
+            [value]="selectedRouteIndex"
+            (change)="onRouteSelectionChange($event)"
+            aria-label="Choose a route"
+          >
+            <option *ngFor="let option of routeOptions; let i = index" [value]="i">
+              {{ option.fastest ? 'Fastest' : 'Route ' + (i + 1) }} · {{ option.route.distanceMeters / 1000 | number: '1.1-1' }} km · {{ option.route.durationSeconds / 60 | number: '1.0-0' }} min · {{ option.hazardCount }} reported
+            </option>
+          </select>
+          <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
+        </div>
+        <div class="route-map-hint" *ngIf="routeOptions.length > 1">
+          <span><i class="route-legend-fastest"></i> Fastest</span>
+          <span><i class="route-legend-selected"></i> Selected</span>
+          <span><i class="route-legend-alternative"></i> Alternative</span>
+          <span>Tap a line on the map to choose</span>
+        </div>
+      </div>
+
+      <div class="selected-route-summary" *ngIf="routeCalculated && routeOptions[selectedRouteIndex] as option">
+        <div class="selected-route-metrics">
+          <div><strong>{{ option.route.durationSeconds / 60 | number: '1.0-0' }} min</strong><span>estimated</span></div>
+          <div><strong>{{ option.route.distanceMeters / 1000 | number: '1.1-1' }} km</strong><span>distance</span></div>
+        </div>
+        <div class="route-risk-note" [class.route-risk-caution]="option.seriousHazardCount > 0">
+          <ion-icon [name]="option.seriousHazardCount > 0 ? 'warning-outline' : 'shield-checkmark-outline'"></ion-icon>
+          {{ option.hazardCount === 0 ? 'No hazards reported nearby' : option.hazardCount + ' reported ' + (option.hazardCount === 1 ? 'hazard' : 'hazards') + ' nearby' }}
+          <ng-container *ngIf="option.seriousHazardCount > 0"> · {{ option.seriousHazardCount }} severe</ng-container>
+        </div>
+        <p class="route-safety-disclaimer">Reports may be incomplete and do not guarantee road safety.</p>
+      </div>
+
+      <section class="vehicle-mode-picker" *ngIf="routeCalculated" aria-label="Choose vehicle for bump detection">
+        <div class="vehicle-mode-picker-heading">
+          <strong>Detection mode</strong>
+          <span>Choose your vehicle</span>
+        </div>
+        <div class="vehicle-mode-options" role="group" aria-label="Vehicle mode">
+          <button
+            type="button"
+            [class.vehicle-mode-active]="vehicleMode === 'bike'"
+            [attr.aria-pressed]="vehicleMode === 'bike'"
+            (click)="selectVehicleMode('bike')"
+          >
+            <ion-icon name="bicycle-outline"></ion-icon>
+            <span>Bike</span>
+          </button>
+          <button
+            type="button"
+            [class.vehicle-mode-active]="vehicleMode === 'car'"
+            [attr.aria-pressed]="vehicleMode === 'car'"
+            (click)="selectVehicleMode('car')"
+          >
+            <ion-icon name="car-sport-outline"></ion-icon>
+            <span>Car</span>
+          </button>
+        </div>
+        <p class="vehicle-mode-description">{{ vehicleModeDescription }}. This also updates the mode in Preferences.</p>
+      </section>
+    </div>
+
+    <footer class="route-action-dock">
+      <button
+        type="button"
+        class="route-primary-action"
+        *ngIf="!routeCalculated"
+        [disabled]="routingInProgress || toText.trim().length < 3"
+        (click)="calculateRoute()"
+      >
+        <ion-spinner name="crescent" *ngIf="routingInProgress"></ion-spinner>
+        <ng-container *ngIf="!routingInProgress"><ion-icon name="search-outline"></ion-icon> Show routes</ng-container>
+        <span class="route-action-label" *ngIf="routingInProgress">Finding routes</span>
+      </button>
+      <ng-container *ngIf="routeCalculated">
+        <button type="button" class="route-primary-action" (click)="startNavigation()">
+          <ion-icon name="navigate"></ion-icon> Start navigation
+        </button>
+        <button type="button" class="route-secondary-action" (click)="editDestination()">Edit destination</button>
+      </ng-container>
+      <div class="route-safety-compact" *ngIf="routeCalculated">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        <span>Follow road signs and local traffic rules.</span>
+      </div>
+    </footer>
+  </section>
+
+  <section class="navigation-guidance-card" *ngIf="navigating">
+    <div class="navigation-guidance-icon" [class.navigation-arrived]="arrivedAtDestination">
+      <ion-icon [name]="arrivedAtDestination ? 'flag-outline' : maneuverIcon"></ion-icon>
+    </div>
+    <div class="navigation-guidance-copy">
+      <span>{{ arrivedAtDestination ? 'DESTINATION' : 'NEXT TURN · ' + formattedNextTurnDistance }}</span>
+      <strong aria-live="polite" aria-atomic="true">{{ arrivedAtDestination ? 'You have arrived' : (activeNavigationStep?.instruction || 'Continue along the route') }}</strong>
+      <small *ngIf="!arrivedAtDestination">toward {{ selectedTo?.label }}</small>
+    </div>
+    <button
+      type="button"
+      class="navigation-voice-button"
+      (click)="toggleNavigationAudio()"
+      [attr.aria-label]="navigationMuted ? 'Enable voice guidance' : 'Mute voice guidance'"
+      [attr.aria-pressed]="!navigationMuted"
+    >
+      <ion-icon [name]="navigationMuted ? 'volume-mute-outline' : 'volume-high-outline'"></ion-icon>
+    </button>
+  </section>
+
+  <section class="navigation-trip-panel" *ngIf="navigating" aria-label="Trip progress">
+    <div class="trip-progress-track" role="progressbar" aria-label="Route progress" [attr.aria-valuenow]="navigationProgressPercent" aria-valuemin="0" aria-valuemax="100">
+      <span [style.width.%]="navigationProgressPercent"></span>
+    </div>
+    <div class="trip-progress-summary">
+      <div class="trip-remaining">
+        <strong>{{ arrivedAtDestination ? 'Arrived' : (remainingDurationSeconds / 60 | number: '1.0-0') + ' min' }}</strong>
+        <span>{{ arrivedAtDestination ? selectedTo?.label : formattedRemainingDistance + ' remaining' }}</span>
+      </div>
+      <div class="trip-eta">
+        <span>ETA</span>
+        <strong>{{ arrivedAtDestination ? 'Now' : formattedArrivalTime }}</strong>
+      </div>
+      <button type="button" class="end-navigation-button" (click)="stopNavigation()" aria-label="Exit navigation">
+        <ion-icon name="close"></ion-icon><span>Exit</span>
+      </button>
+    </div>
+    <div class="trip-hazard-note route-deviation-note" *ngIf="offRoute">
+      <ion-icon name="navigate-outline"></ion-icon>
+      <span>{{ navigationError || 'You appear to be off route. Recalculate to refresh directions.' }}</span>
+      <button type="button" (click)="recalculateNavigationRoute()" [disabled]="routingInProgress">
+        {{ routingInProgress ? 'Updating...' : 'Recalculate' }}
+      </button>
+    </div>
+    <div class="trip-hazard-note" *ngIf="!offRoute && (routeOptions[selectedRouteIndex]?.hazardCount ?? 0) > 0">
+      <ion-icon name="warning-outline"></ion-icon>
+      <span>{{ routeOptions[selectedRouteIndex].hazardCount }} reported {{ routeOptions[selectedRouteIndex].hazardCount === 1 ? 'hazard' : 'hazards' }} near this route</span>
+    </div>
+  </section>
 </ion-content>

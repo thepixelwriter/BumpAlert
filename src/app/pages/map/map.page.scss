@@ -1234,13 +1234,18 @@
 /* Animated info overlay — two cards side-by-side at 50% width */
 .map-info-overlay {
   position: absolute;
-  top: calc(74px + env(safe-area-inset-top, 0px) + 8px);
+  top: auto;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   left: 12px;
   right: 12px;
   display: flex;
   gap: 10px;
   z-index: 100;
   pointer-events: none;
+}
+
+.map-info-overlay.navigation-active {
+  bottom: calc(170px + env(safe-area-inset-bottom, 0px));
 }
 
 .map-info-card {
@@ -1297,6 +1302,11 @@
   letter-spacing: -0.03em;
   transition: color 0.3s ease, transform 0.2s ease;
   animation: value-pop 0.35s ease-out;
+}
+
+@media (max-width: 360px) {
+  .map-info-overlay { left: 8px; right: 8px; gap: 7px; }
+  .map-info-card { padding: 9px 10px; }
 }
 
 .map-info-value.text-danger { color: #f87171; }

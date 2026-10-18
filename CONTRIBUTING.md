@@ -229,9 +229,10 @@ BumpAlert uses the Google Maps JavaScript, Static, and Street View APIs. You nee
 
 ```dotenv
 GOOGLE_MAPS_API_KEY=your_actual_api_key_here
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
 ```
 
-The build script reads this file and generates a runtime environment configuration. **Never commit `.env` to Git.**
+The build script reads this file and generates a runtime environment configuration. Set `GOOGLE_CLIENT_ID` to enable Google sign-in in the client, and configure the same ID as the API Worker's `GOOGLE_CLIENT_ID` secret so the backend can verify credentials. For GitHub Actions deployment, add both values as repository Actions secrets. **Never commit `.env` to Git.**
 
 ### Environment Variable Priority
 

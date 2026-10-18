@@ -90,14 +90,18 @@ GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
 ```
 
-The build script reads this value and generates the local runtime environment file. Do not commit `.env` or generated runtime credentials.
+The build script reads these values and generates the local runtime environment file. `GOOGLE_CLIENT_ID` is used by Google sign-in; configure the same OAuth client ID as the `GOOGLE_CLIENT_ID` secret for the API Worker so it can verify sign-in tokens. For GitHub Actions deployment, add `GOOGLE_MAPS_API_KEY` and `GOOGLE_CLIENT_ID` as repository Actions secrets. Do not commit `.env` or generated runtime credentials.
 
 Enable the following Google Maps Platform APIs for the key:
 
 - Maps JavaScript API
+- Directions API
+- Geocoding API
+- Places API
+- Places API (New)
+- Telemetry API
 - Maps Static API
 - Street View Static API
-- Places API
 
 Billing must be enabled. For browser builds, restrict the key to approved HTTP referrers. For native Capacitor builds, use an appropriate native application restriction or a separate key that is restricted according to the platform configuration. The Maps Static and Street View Static requests must also be allowed by the key restrictions.
 

@@ -45,14 +45,14 @@ const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: '/tabs/map',
+        redirectTo: '/tabs/telemetry',
         pathMatch: 'full',
       },
     ],
   },
   {
     path: '',
-    redirectTo: '/tabs/map',
+    redirectTo: '/tabs/telemetry',
     pathMatch: 'full',
   },
 ];

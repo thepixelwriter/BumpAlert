@@ -33,7 +33,7 @@ export class AuthPage implements OnInit {
 
   ngOnInit(): void {
     if (this.auth.isAuthenticated()) {
-      this.router.navigateByUrl('/tabs/map');
+      this.router.navigateByUrl('/tabs/telemetry');
     }
   }
 
@@ -85,7 +85,7 @@ export class AuthPage implements OnInit {
         this.showToast('Welcome back');
       }
 
-      await this.router.navigateByUrl('/tabs/map');
+      await this.router.navigateByUrl('/tabs/telemetry');
     } catch (error) {
       const responseError = (error as { error?: { error?: string } | string; message?: string }).error;
       const message = typeof responseError === 'string'
@@ -128,7 +128,7 @@ export class AuthPage implements OnInit {
         try {
           await this.auth.googleLogin(response.credential).toPromise();
           this.showToast('Google login successful');
-          await this.router.navigateByUrl('/tabs/map');
+          await this.router.navigateByUrl('/tabs/telemetry');
         } catch (error) {
           const responseError = (error as { error?: { error?: string } | string; message?: string }).error;
           const message = typeof responseError === 'string'

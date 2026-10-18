@@ -1,7 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Geolocation, type Position } from '@capacitor/geolocation';
-import { GeocodeResult, RouteResult } from '../models/map.model';
+import { GeocodeResult, RouteResult, RouteStep } from '../models/map.model';
 import { GoogleMapsLoaderService } from './google-maps-loader.service';
 
 @Injectable({
@@ -112,19 +112,21 @@ export class MapNavigationService implements OnDestroy {
   }
 
   /** Computes a driving route between two coordinates via Google Directions. */
-  async getRoute(
+  async getRoutes(
     origin: { latitude: number; longitude: number },
     destination: { latitude: number; longitude: number },
-  ): Promise<RouteResult> {
+  ): Promise<RouteResult[]> {
     const maps = await this.googleMapsLoader.load();
     const directionsService = new maps.DirectionsService();
 
-    return new Promise<RouteResult>((resolve, reject) => {
+    return new Promise<RouteResult[]>((resolve, reject) => {
       directionsService.route(
         {
           origin: { lat: origin.latitude, lng: origin.longitude },
           destination: { lat: destination.latitude, lng: destination.longitude },
           travelMode: maps.TravelMode.DRIVING,
+          provideRouteAlternatives: true,
+          unitSystem: maps.UnitSystem.METRIC,
         },
         (result, status) => {
           if (status !== 'OK' || !result) {
@@ -132,23 +134,65 @@ export class MapNavigationService implements OnDestroy {
             return;
           }
 
-          const leg = result.routes[0]?.legs[0];
-          if (!leg) {
+          const routes = result.routes
+            .map((route): RouteResult | null => {
+              const leg = route.legs[0];
+              if (!leg) return null;
+
+              const steps: RouteStep[] = leg.steps.map((step) => ({
+                instruction: this.cleanInstruction(step.instructions),
+                maneuver: step.maneuver ?? '',
+                distanceMeters: step.distance?.value ?? 0,
+                durationSeconds: step.duration?.value ?? 0,
+                start: { latitude: step.start_location.lat(), longitude: step.start_location.lng() },
+                end: { latitude: step.end_location.lat(), longitude: step.end_location.lng() },
+              }));
+
+              return {
+                summary: route.summary || 'Suggested route',
+                points: route.overview_path.map((point) => ({
+                  latitude: point.lat(),
+                  longitude: point.lng(),
+                })),
+                distanceMeters: leg.distance?.value ?? 0,
+                durationSeconds: leg.duration?.value ?? 0,
+                steps,
+              };
+            })
+            .filter((route): route is RouteResult => route !== null);
+
+          if (routes.length === 0) {
             reject(new Error('No route found between the selected points'));
             return;
           }
 
-          resolve({
-            points: result.routes[0].overview_path.map((p) => ({
-              latitude: p.lat(),
-              longitude: p.lng(),
-            })),
-            distanceMeters: leg.distance?.value ?? 0,
-            durationSeconds: leg.duration?.value ?? 0,
-          });
+          resolve(routes);
         },
       );
     });
+  }
+
+  /** Keeps existing callers on the original single-best-route API. */
+  async getRoute(
+    origin: { latitude: number; longitude: number },
+    destination: { latitude: number; longitude: number },
+  ): Promise<RouteResult> {
+    const [route] = await this.getRoutes(origin, destination);
+    if (!route) {
+      throw new Error('No route found between the selected points');
+    }
+    return route;
+  }
+
+  private cleanInstruction(instruction: string): string {
+    return instruction
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   ngOnDestroy(): void {

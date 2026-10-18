@@ -34,6 +34,7 @@ jobs:
         run: node scripts/set-env.js
         env:
           GOOGLE_MAPS_API_KEY: ci-placeholder
+          GOOGLE_CLIENT_ID: ci-placeholder.apps.googleusercontent.com
 
       - name: Lint
         run: npm run lint

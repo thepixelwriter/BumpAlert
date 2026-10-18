@@ -26,6 +26,7 @@ jobs:
         run: node scripts/set-env.js
         env:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
 
       - name: Build Angular app
         run: npm run build -- --configuration production
@@ -39,4 +40,3 @@ jobs:
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
