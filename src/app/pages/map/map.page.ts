@@ -871,7 +871,7 @@ export class MapPage implements OnInit, OnDestroy {
       map: this.map,
       strokeColor: this.routeOptions[this.selectedRouteIndex]?.fastest ? '#4ade80' : '#38bdf8',
       strokeOpacity: 0.98,
-      strokeWeight: 12,
+      strokeWeight: 6,
       zIndex: 30,
       clickable: true,
     });
@@ -884,7 +884,7 @@ export class MapPage implements OnInit, OnDestroy {
         map: this.map,
         strokeColor: option.fastest ? '#4ade80' : '#c6d8de',
         strokeOpacity: option.fastest ? 0.9 : 0.62,
-        strokeWeight: 9,
+        strokeWeight: 4.5,
         zIndex: option.fastest ? 20 : 10,
         clickable: true,
       });

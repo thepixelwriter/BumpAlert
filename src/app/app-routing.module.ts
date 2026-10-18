@@ -1,10 +1,12 @@
 import { NgModule } from '@angular/core';
 import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './guards/auth.guard';
+import { GuestGuard } from './guards/guest.guard';
 
 const routes: Routes = [
   {
     path: 'auth',
+    canActivate: [GuestGuard],
     loadChildren: () => import('./pages/auth/auth.module').then((m) => m.AuthPageModule),
   },
   {
@@ -23,7 +25,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    redirectTo: '/auth',
+    redirectTo: '/tabs/telemetry',
     pathMatch: 'full',
   },
 ];

@@ -258,6 +258,27 @@
       </div>
     </div>
 
+    <div class="settings-section">
+      <div class="section-label">ACCOUNT</div>
+      <div class="settings-card">
+        <div
+          class="setting-clickable-row"
+          role="button"
+          tabindex="0"
+          (click)="signOut()"
+          (keyup.enter)="signOut()"
+          (keyup.space)="signOut()"
+          aria-label="Sign out of BumpAlert"
+        >
+          <div class="row-label-group">
+            <span class="row-title text-alarming">Sign out</span>
+            <span class="row-subtitle">Sign out on this device</span>
+          </div>
+          <ion-icon name="log-out-outline" class="row-action-icon text-alarming"></ion-icon>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </ion-content>

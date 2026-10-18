@@ -54,6 +54,12 @@ export class AuthService {
     );
   }
 
+  validateSession(): Observable<{ valid: boolean }> {
+    return this.http.get<{ valid: boolean }>(`${this.apiUrl}/auth/session`, {
+      headers: this.getAuthHeaders(),
+    });
+  }
+
   forgotPassword(email: string): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.apiUrl}/auth/forgot-password`, { email });
   }

@@ -1,9 +1,11 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { ToastController, AlertController } from '@ionic/angular';
+import { Router } from '@angular/router';
 import { TelemetryService } from '../../services/telemetry.service';
 import { WakeLockService } from '../../services/wake-lock.service';
 import { SensorDetectionService, LiveAcceleration, PermissionState, VehicleMode } from '../../services/sensor-detection.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-settings',
@@ -48,6 +50,8 @@ export class SettingsPage implements OnInit, OnDestroy {
     private readonly sensorDetection: SensorDetectionService,
     private readonly toastCtrl: ToastController,
     private readonly alertCtrl: AlertController,
+    private readonly auth: AuthService,
+    private readonly router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -108,6 +112,11 @@ export class SettingsPage implements OnInit, OnDestroy {
 
   onVehicleModeChange(mode: VehicleMode): void {
     this.sensorDetection.setVehicleMode(mode);
+  }
+
+  async signOut(): Promise<void> {
+    this.auth.logout();
+    await this.router.navigateByUrl('/auth');
   }
 
   async requestMotionPermission(): Promise<void> {

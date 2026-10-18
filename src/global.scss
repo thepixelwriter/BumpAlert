@@ -612,7 +612,7 @@ ion-toast[color='danger'] {
 .navigation-trip-panel {
   left: 12px;
   right: 12px;
-  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   padding: 15px 16px 12px;
   border-radius: 18px;
 }
@@ -712,6 +712,95 @@ ion-toast[color='danger'] {
   .navigation-guidance-icon { width: 44px; height: 44px; }
   .navigation-voice-button { width: 38px; height: 38px; }
   .trip-progress-summary { grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
+}
+
+@media (min-width: 768px) {
+  .route-planner-panel {
+    width: min(440px, calc(100% - 32px));
+    max-width: none;
+    margin-inline: 0;
+    left: 16px;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+  .map-info-overlay {
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    right: 16px;
+    bottom: auto;
+    left: auto;
+    width: 240px;
+    flex-direction: column;
+  }
+  .map-info-overlay.navigation-active { bottom: auto; }
+  .map-info-card { width: 100%; max-width: none; }
+  .navigation-guidance-card {
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    left: 16px;
+    right: auto;
+    width: min(460px, calc(100% - 32px));
+  }
+  .navigation-trip-panel {
+    left: auto;
+    right: 16px;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    width: min(420px, calc(100% - 32px));
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .route-planner-panel {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    left: 8px;
+    right: auto;
+    width: min(390px, 50vw);
+    max-width: none;
+    margin-inline: 0;
+    padding: 12px 14px 0;
+    border-radius: 16px;
+  }
+  .route-planner-header { margin-bottom: 8px; }
+  .route-planner-header h2 { font-size: 1.1rem; }
+  .route-choice-list { margin-top: 10px; }
+  .route-primary-action { min-height: 46px; margin-top: 4px; }
+  .route-secondary-action { min-height: 32px; }
+  .route-action-dock { margin-inline: -14px; padding: 7px 14px calc(7px + env(safe-area-inset-bottom, 0px)); }
+  .navigation-guidance-card {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    left: 8px;
+    right: auto;
+    width: min(54vw, 440px);
+    min-height: 76px;
+    grid-template-columns: 42px minmax(0, 1fr) 38px;
+    gap: 7px;
+    padding: 8px 10px;
+  }
+  .navigation-guidance-icon { width: 38px; height: 42px; }
+  .navigation-guidance-icon ion-icon { font-size: 2rem; }
+  .navigation-guidance-copy { gap: 1px; }
+  .navigation-guidance-copy strong { font-size: 0.8rem; }
+  .navigation-guidance-copy small { display: none; }
+  .navigation-voice-button { width: 36px; height: 36px; }
+  .navigation-trip-panel {
+    left: auto;
+    right: 8px;
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    width: min(45vw, 390px);
+    padding: 10px 12px 8px;
+  }
+  .map-info-overlay,
+  .map-info-overlay.navigation-active {
+    top: auto;
+    left: 8px;
+    right: auto;
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    width: min(44vw, 360px);
+    gap: 7px;
+  }
+  .map-info-card { min-width: 0; padding: 8px 10px; gap: 3px; }
+  .map-info-value { font-size: 1.05rem; }
+  .map-info-label { font-size: 0.55rem; }
+  .map-info-unit { font-size: 0.62rem; }
 }
 
 /* Animated info overlay — two cards side-by-side at 50% width */
